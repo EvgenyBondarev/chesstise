@@ -86,7 +86,7 @@ function PlayerSearch() {
   );
 }
 
-export default function Sidebar({ onSignIn }: { onSignIn: () => void }) {
+export default function Sidebar({ onSignIn, isOpen }: { onSignIn: () => void; isOpen?: boolean }) {
   const displayName  = useAuthStore(s => s.displayName);
   const logout       = useAuthStore(s => s.logout);
   const clearRuns        = useProfileStore(s => s.cellGuesserRuns);
@@ -124,7 +124,7 @@ export default function Sidebar({ onSignIn }: { onSignIn: () => void }) {
   };
 
   return (
-    <nav className="sidebar" aria-label="Main navigation">
+    <nav className={`sidebar${isOpen ? ' sidebar-open' : ''}`} aria-label="Main navigation">
       <div className="sidebar-logo" aria-hidden="true">♟ Chesstíse</div>
       <h2 className="sr-only">Chesstíse – Blindfold Chess Trainer</h2>
 

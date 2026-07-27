@@ -76,10 +76,22 @@ export default function ClassicalGame({ game }: { game: GameData }) {
   const [commentary, setCommentary] = useState<Commentary | null>(null);
 
   const [customQ,        setCustomQ]       = useState('');
+  const [boardWidth,     setBoardWidth]    = useState(480);
   const lastSpokenRef    = useRef('');
   const prevQRef         = useRef('');
   const keyHandlerRef    = useRef<((e: KeyboardEvent) => void) | null>(null);
   const questionInputRef = useRef<HTMLInputElement>(null);
+  const boardContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = boardContainerRef.current;
+    if (!el) return;
+    const obs = new ResizeObserver(([entry]) => {
+      setBoardWidth(Math.min(480, Math.floor(entry.contentRect.width)));
+    });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
 
   const currentFen = fens[Math.min(plyIdx, fens.length - 1)];
   const isGameOver = plyIdx >= game.moves.length;
@@ -201,16 +213,18 @@ export default function ClassicalGame({ game }: { game: GameData }) {
             <span className="round-counter">{plyIdx} / {game.moves.length}</span>
           </div>
 
-          <CollapsibleBoard>
-            <Chessboard
-              position={currentFen}
-              boardWidth={480}
-              arePiecesDraggable={false}
-              customArrows={arrows}
-              animationDuration={200}
-              showBoardNotation={false}
-            />
-          </CollapsibleBoard>
+          <div ref={boardContainerRef} style={{ width: '100%' }}>
+            <CollapsibleBoard>
+              <Chessboard
+                position={currentFen}
+                boardWidth={boardWidth}
+                arePiecesDraggable={false}
+                customArrows={arrows}
+                animationDuration={200}
+                showBoardNotation={false}
+              />
+            </CollapsibleBoard>
+          </div>
 
           <div className="prompt-card" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '0.4rem' }}>
             {isGameOver && <span>Game over — {game.result}</span>}
@@ -285,8 +299,16 @@ export default function ClassicalGame({ game }: { game: GameData }) {
             />
           </div>
 
+          <div className="cg-mobile-bar">
+            <button className="cg-mob-btn" onClick={handleF} aria-label="Back">← Back</button>
+            <button className="cg-mob-btn" onClick={handleJ} aria-label="Next move">Next →</button>
+            <button className="cg-mob-btn" onClick={handleK} aria-label="Commentary">💬</button>
+            <button className="cg-mob-btn" onClick={() => questionInputRef.current?.focus()} aria-label="Ask question">❓ Ask</button>
+            <button className="cg-mob-btn" onClick={() => speak(lastSpokenRef.current)} aria-label="Re-read">↺</button>
+          </div>
+
           <div className="cg-legend">
-            F = back &nbsp;·&nbsp; J = next move &nbsp;·&nbsp; A / Space = commentary &nbsp;·&nbsp; D = ask &nbsp;·&nbsp; R = re-read
+            F = back · J = next · A / Space = commentary · D = ask · R = re-read
           </div>
         </div>
       </div>
