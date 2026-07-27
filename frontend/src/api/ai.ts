@@ -25,12 +25,40 @@ export async function fetchLichessEval(fen: string): Promise<LichessEval | null>
   }
 }
 
+// Direct Groq call — used when VITE_GROQ_API_KEY is set, bypassing the backend
+const GROQ_KEY = (import.meta.env.VITE_GROQ_API_KEY as string | undefined) || '';
+
+async function callGroq(prompt: string): Promise<string | null> {
+  if (GROQ_KEY) {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${GROQ_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model:      'llama-3.3-70b-versatile',
+        messages:   [{ role: 'user', content: prompt }],
+        max_tokens: 300,
+      }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return (data.choices?.[0]?.message?.content as string | undefined)?.trim() ?? null;
+  }
+  return null;
+}
+
 export async function fetchGeminiEval(
   fen: string,
   pgn: string,
   suggestedMoves: string[],
 ): Promise<string | null> {
+  const prompt =
+    `You are a concise chess coach. Game so far: ${pgn}. ` +
+    `Position FEN: ${fen}. ` +
+    `The student suggests: ${suggestedMoves.join(', ')}. ` +
+    `Is this a good move? What is the key idea? Answer in exactly 2 short sentences.`;
   try {
+    const direct = await callGroq(prompt);
+    if (direct !== null) return direct;
     const { data } = await api.post<{ text: string }>('/ai/evaluate', { fen, pgn, suggestedMoves });
     return data.text;
   } catch {
@@ -44,7 +72,14 @@ export async function fetchGroqIntro(
   year: number | null,
   event: string | null,
 ): Promise<string | null> {
+  const context = [year, event].filter(Boolean).join(', ');
+  const prompt =
+    `You are a concise chess commentator. Introduce the game between ${white} and ${black}` +
+    (context ? ` (${context})` : '') +
+    `. Who are these players and what style of play should we expect? Answer in exactly 2 short sentences.`;
   try {
+    const direct = await callGroq(prompt);
+    if (direct !== null) return direct;
     const { data } = await api.post<{ text: string }>('/ai/intro', { white, black, year, event });
     return data.text;
   } catch {
@@ -57,7 +92,14 @@ export async function fetchGroqQuestion(
   pgn: string,
   question: string,
 ): Promise<string | null> {
+  const prompt =
+    `You are a chess coach. Game so far: ${pgn}. ` +
+    `Position FEN: ${fen}. ` +
+    `The student asks: ${question}. ` +
+    `Answer concisely in 2-3 sentences.`;
   try {
+    const direct = await callGroq(prompt);
+    if (direct !== null) return direct;
     const { data } = await api.post<{ text: string }>('/ai/question', { fen, pgn, question });
     return data.text;
   } catch {
@@ -70,7 +112,14 @@ export async function fetchGeminiExplain(
   pgn: string,
   move: string,
 ): Promise<string | null> {
+  const prompt =
+    `You are a concise chess coach. Game so far: ${pgn}. ` +
+    `Position FEN: ${fen}. ` +
+    `The move played was ${move}. ` +
+    `Explain the strategic or tactical reason in exactly 2 short sentences.`;
   try {
+    const direct = await callGroq(prompt);
+    if (direct !== null) return direct;
     const { data } = await api.post<{ text: string }>('/ai/explain', { fen, pgn, move });
     return data.text;
   } catch (err: unknown) {

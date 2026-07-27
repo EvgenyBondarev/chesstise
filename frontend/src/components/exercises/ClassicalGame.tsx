@@ -75,9 +75,10 @@ export default function ClassicalGame({ game }: { game: GameData }) {
   const [plyIdx,     setPlyIdx]     = useState(0);
   const [commentary, setCommentary] = useState<Commentary | null>(null);
 
-  const [customQ,       setCustomQ]       = useState('');
-  const lastSpokenRef   = useRef('');
-  const keyHandlerRef   = useRef<((e: KeyboardEvent) => void) | null>(null);
+  const [customQ,        setCustomQ]       = useState('');
+  const lastSpokenRef    = useRef('');
+  const prevQRef         = useRef('');
+  const keyHandlerRef    = useRef<((e: KeyboardEvent) => void) | null>(null);
   const questionInputRef = useRef<HTMLInputElement>(null);
 
   const currentFen = fens[Math.min(plyIdx, fens.length - 1)];
@@ -261,7 +262,17 @@ export default function ClassicalGame({ game }: { game: GameData }) {
               type="text"
               placeholder="Ask a question about this position… (D to focus, Enter to send)"
               value={customQ}
-              onChange={e => setCustomQ(e.target.value)}
+              onChange={e => {
+                const newVal = e.target.value;
+                // Speak each word as it's completed (space typed)
+                if (newVal.endsWith(' ') && !prevQRef.current.endsWith(' ')) {
+                  const words = newVal.trim().split(/\s+/);
+                  const lastWord = words[words.length - 1];
+                  if (lastWord) speak(lastWord);
+                }
+                prevQRef.current = newVal;
+                setCustomQ(newVal);
+              }}
               onKeyDown={e => {
                 if (e.key === 'Enter') {
                   e.preventDefault();
