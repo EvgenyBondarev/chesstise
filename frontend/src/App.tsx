@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import AppLayout from './components/layout/AppLayout';
 import CellGuesser from './components/exercises/PerspectiveFlip';
@@ -12,12 +13,21 @@ import OpeningRecall from './components/exercises/OpeningRecall';
 import CalculationTrainer from './components/exercises/CalculationTrainer';
 import { findGame } from './data/classicalGames';
 import { findGameAcrossPlayers } from './data/playerRegistry';
+import type { ClassicalGame as GameData } from './data/classicalGames';
 
 function ClassicalGamePage() {
   const { gameId } = useParams<{ gameId: string }>();
-  const game = gameId
-    ? (findGameAcrossPlayers(gameId) ?? findGame(gameId))
-    : undefined;
+  const [game, setGame] = useState<GameData | null | undefined>(null);
+
+  useEffect(() => {
+    if (!gameId) { setGame(undefined); return; }
+    setGame(null);
+    findGameAcrossPlayers(gameId).then(g => {
+      setGame(g ?? findGame(gameId) ?? undefined);
+    });
+  }, [gameId]);
+
+  if (game === null) return <div className="exercise-page"><p style={{ padding: '2rem' }}>Loading…</p></div>;
   if (!game) return <div className="exercise-page"><p style={{ padding: '2rem' }}>Game not found.</p></div>;
   return <ClassicalGame game={game} />;
 }

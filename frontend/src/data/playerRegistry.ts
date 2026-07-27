@@ -1,167 +1,305 @@
 import type { ClassicalGame } from './classicalGames';
 import { parsePgn } from '../utils/pgnParser';
 
-// ── Raw PGN imports (Vite ?raw — bundled as strings) ──────────────────────
-import carlsenRaw        from './carlsen_games.pgn?raw';
-import kasparovRaw       from './kasparov_games.pgn?raw';
-import fischerRaw        from './fischer_games.pgn?raw';
-import capablancaRaw     from './capablanca_games.pgn?raw';
-import talRaw            from './tal_games.pgn?raw';
-import karpovRaw         from './karpov_games.pgn?raw';
-import ananRaw           from './anand_games.pgn?raw';
-import kramnikRaw        from './kramnik_games.pgn?raw';
-import morphyRaw         from './morphy_games.pgn?raw';
-import nakamuraRaw       from './nakamura_games.pgn?raw';
-import caruana           from './caruana_games.pgn?raw';
-import alekhinRaw        from './alekhine_games.pgn?raw';
-import botvinnikRaw      from './botvinnik_games.pgn?raw';
-import smyslovRaw        from './smyslov_games.pgn?raw';
-import spasskyRaw        from './spassky_games.pgn?raw';
-import petrosianRaw      from './petrosian_games.pgn?raw';
-// World Champions
-import steinitzRaw       from './steinitz_games.pgn?raw';
-import laskerRaw         from './lasker_games.pgn?raw';
-import euweRaw           from './euwe_games.pgn?raw';
-import dingRaw           from './ding_games.pgn?raw';
-import gukeshRaw         from './gukesh_games.pgn?raw';
-// Top modern GMs
-import topalovRaw        from './topalov_games.pgn?raw';
-import shirovRaw         from './shirov_games.pgn?raw';
-import lekoRaw           from './leko_games.pgn?raw';
-import morozevichRaw     from './morozevich_games.pgn?raw';
-import ivanchukRaw       from './ivanchuk_games.pgn?raw';
-import grischukRaw       from './grischuk_games.pgn?raw';
-import aroianRaw         from './aronian_games.pgn?raw';
-import gelfandRaw        from './gelfand_games.pgn?raw';
-import karjakinRaw       from './karjakin_games.pgn?raw';
-import mamedyarovRaw     from './mamedyarov_games.pgn?raw';
-import radjabovRaw       from './radjabov_games.pgn?raw';
-import mvlRaw            from './mvl_games.pgn?raw';
-import soRaw             from './so_games.pgn?raw';
-import giriRaw           from './giri_games.pgn?raw';
-import nepoRaw           from './nepomniachtchi_games.pgn?raw';
-import firouzjaRaw       from './firouzja_games.pgn?raw';
-import praggRaw          from './praggnanandhaa_games.pgn?raw';
-import dudaRaw           from './duda_games.pgn?raw';
-import rapportRaw        from './rapport_games.pgn?raw';
-import abdusattorovRaw   from './abdusattorov_games.pgn?raw';
-// Classic legends
-import rubinsteinRaw     from './rubinstein_games.pgn?raw';
-import nimzowitschRaw    from './nimzowitsch_games.pgn?raw';
-import keresRaw          from './keres_games.pgn?raw';
-import bronsteinRaw      from './bronstein_games.pgn?raw';
-import gellerRaw         from './geller_games.pgn?raw';
-import korchnoisRaw      from './korchnoi_games.pgn?raw';
-import larsenRaw         from './larsen_games.pgn?raw';
-import timmanRaw         from './timman_games.pgn?raw';
-import portischRaw       from './portisch_games.pgn?raw';
-import polgarjRaw        from './polgarj_games.pgn?raw';
-import shortRaw          from './short_games.pgn?raw';
-import nunnRaw           from './nunn_games.pgn?raw';
-import svidlerRaw        from './svidler_games.pgn?raw';
-import adamsRaw          from './adams_games.pgn?raw';
-
 export interface PlayerEntry {
-  id:         string;
-  name:       string;
+  id: string;
+  name: string;
   mainPlayer: string;
-  gameCount:  number;
-  getGames:   () => ClassicalGame[];
-  findGame:   (id: string) => ClassicalGame | undefined;
+  gameCount: number;
+  getGames: () => Promise<ClassicalGame[]>;
+  findGame: (id: string) => Promise<ClassicalGame | undefined>;
 }
 
-function countGames(raw: string): number {
-  return (raw.match(/^\[Event\s/gm) ?? []).length;
-}
-
-function makeLoader(raw: string, id: string): () => ClassicalGame[] {
-  let cache: ClassicalGame[] | null = null;
-  return () => {
-    if (!cache) cache = parsePgn(raw, id);
-    return cache;
-  };
-}
+const _cache = new Map<string, ClassicalGame[]>();
 
 function makeEntry(
-  id: string, name: string, mainPlayer: string, raw: string,
+  id: string,
+  name: string,
+  mainPlayer: string,
+  loader: () => Promise<string>,
 ): PlayerEntry {
-  const getGames = makeLoader(raw, id);
+  const state = { count: 0 };
+  const getGames = async (): Promise<ClassicalGame[]> => {
+    if (_cache.has(id)) return _cache.get(id)!;
+    const raw = await loader();
+    const games = parsePgn(raw, id);
+    state.count = games.length;
+    _cache.set(id, games);
+    return games;
+  };
   return {
     id, name, mainPlayer,
-    gameCount: countGames(raw),
+    get gameCount() { return state.count; },
     getGames,
-    findGame: (gid) => getGames().find(g => g.id === gid),
+    findGame: async (gid) => (await getGames()).find(g => g.id === gid),
   };
 }
 
 export const PLAYER_REGISTRY: PlayerEntry[] = [
   // World Champions (chronological)
-  makeEntry('morphy',          'Paul Morphy',                  'morphy',          morphyRaw),
-  makeEntry('steinitz',        'William Steinitz',             'steinitz',        steinitzRaw),
-  makeEntry('lasker',          'Emanuel Lasker',               'lasker',          laskerRaw),
-  makeEntry('capablanca',      'José Raúl Capablanca',         'capablanca',      capablancaRaw),
-  makeEntry('alekhine',        'Alexander Alekhine',           'alekhine',        alekhinRaw),
-  makeEntry('euwe',            'Max Euwe',                     'euwe',            euweRaw),
-  makeEntry('botvinnik',       'Mikhail Botvinnik',            'botvinnik',       botvinnikRaw),
-  makeEntry('smyslov',         'Vasily Smyslov',               'smyslov',         smyslovRaw),
-  makeEntry('tal',             'Mikhail Tal',                  'tal',             talRaw),
-  makeEntry('petrosian',       'Tigran Petrosian',             'petrosian',       petrosianRaw),
-  makeEntry('spassky',         'Boris Spassky',               'spassky',         spasskyRaw),
-  makeEntry('fischer',         'Robert James Fischer',         'fischer',         fischerRaw),
-  makeEntry('karpov',          'Anatoly Karpov',               'karpov',          karpovRaw),
-  makeEntry('kasparov',        'Garry Kasparov',               'kasparov',        kasparovRaw),
-  makeEntry('kramnik',         'Vladimir Kramnik',             'kramnik',         kramnikRaw),
-  makeEntry('anand',           'Viswanathan Anand',            'anand',           ananRaw),
-  makeEntry('topalov',         'Veselin Topalov',              'topalov',         topalovRaw),
-  makeEntry('carlsen',         'Magnus Carlsen',               'carlsen',         carlsenRaw),
-  makeEntry('ding',            'Ding Liren',                   'ding',            dingRaw),
-  makeEntry('gukesh',          'Dommaraju Gukesh',             'gukesh',          gukeshRaw),
+  makeEntry('morphy',          'Paul Morphy',               'morphy',          () => import('./morphy_games.pgn?raw').then(m => m.default)),
+  makeEntry('steinitz',        'William Steinitz',          'steinitz',        () => import('./steinitz_games.pgn?raw').then(m => m.default)),
+  makeEntry('lasker',          'Emanuel Lasker',            'lasker',          () => import('./lasker_games.pgn?raw').then(m => m.default)),
+  makeEntry('capablanca',      'José Raúl Capablanca',      'capablanca',      () => import('./capablanca_games.pgn?raw').then(m => m.default)),
+  makeEntry('alekhine',        'Alexander Alekhine',        'alekhine',        () => import('./alekhine_games.pgn?raw').then(m => m.default)),
+  makeEntry('euwe',            'Max Euwe',                  'euwe',            () => import('./euwe_games.pgn?raw').then(m => m.default)),
+  makeEntry('botvinnik',       'Mikhail Botvinnik',         'botvinnik',       () => import('./botvinnik_games.pgn?raw').then(m => m.default)),
+  makeEntry('smyslov',         'Vasily Smyslov',            'smyslov',         () => import('./smyslov_games.pgn?raw').then(m => m.default)),
+  makeEntry('tal',             'Mikhail Tal',               'tal',             () => import('./tal_games.pgn?raw').then(m => m.default)),
+  makeEntry('petrosian',       'Tigran Petrosian',          'petrosian',       () => import('./petrosian_games.pgn?raw').then(m => m.default)),
+  makeEntry('spassky',         'Boris Spassky',             'spassky',         () => import('./spassky_games.pgn?raw').then(m => m.default)),
+  makeEntry('fischer',         'Robert James Fischer',      'fischer',         () => import('./fischer_games.pgn?raw').then(m => m.default)),
+  makeEntry('karpov',          'Anatoly Karpov',            'karpov',          () => import('./karpov_games.pgn?raw').then(m => m.default)),
+  makeEntry('kasparov',        'Garry Kasparov',            'kasparov',        () => import('./kasparov_games.pgn?raw').then(m => m.default)),
+  makeEntry('kramnik',         'Vladimir Kramnik',          'kramnik',         () => import('./kramnik_games.pgn?raw').then(m => m.default)),
+  makeEntry('anand',           'Viswanathan Anand',         'anand',           () => import('./anand_games.pgn?raw').then(m => m.default)),
+  makeEntry('topalov',         'Veselin Topalov',           'topalov',         () => import('./topalov_games.pgn?raw').then(m => m.default)),
+  makeEntry('carlsen',         'Magnus Carlsen',            'carlsen',         () => import('./carlsen_games.pgn?raw').then(m => m.default)),
+  makeEntry('ding',            'Ding Liren',                'ding',            () => import('./ding_games.pgn?raw').then(m => m.default)),
+  makeEntry('gukesh',          'Dommaraju Gukesh',          'gukesh',          () => import('./gukesh_games.pgn?raw').then(m => m.default)),
   // Top modern GMs
-  makeEntry('nakamura',        'Hikaru Nakamura',              'nakamura',        nakamuraRaw),
-  makeEntry('caruana',         'Fabiano Caruana',              'caruana',         caruana),
-  makeEntry('firouzja',        'Alireza Firouzja',             'firouzja',        firouzjaRaw),
-  makeEntry('nepomniachtchi',  'Ian Nepomniachtchi',           'nepomniachtchi',  nepoRaw),
-  makeEntry('giri',            'Anish Giri',                   'giri',            giriRaw),
-  makeEntry('mvl',             'Maxime Vachier-Lagrave',       'vachier',         mvlRaw),
-  makeEntry('so',              'Wesley So',                    'so',              soRaw),
-  makeEntry('aronian',         'Levon Aronian',                'aronian',         aroianRaw),
-  makeEntry('grischuk',        'Alexander Grischuk',           'grischuk',        grischukRaw),
-  makeEntry('mamedyarov',      'Shakhriyar Mamedyarov',        'mamedyarov',      mamedyarovRaw),
-  makeEntry('karjakin',        'Sergey Karjakin',              'karjakin',        karjakinRaw),
-  makeEntry('radjabov',        'Teimour Radjabov',             'radjabov',        radjabovRaw),
-  makeEntry('gelfand',         'Boris Gelfand',                'gelfand',         gelfandRaw),
-  makeEntry('ivanchuk',        'Vassily Ivanchuk',             'ivanchuk',        ivanchukRaw),
-  makeEntry('svidler',         'Peter Svidler',                'svidler',         svidlerRaw),
-  makeEntry('leko',            'Peter Leko',                   'leko',            lekoRaw),
-  makeEntry('shirov',          'Alexei Shirov',                'shirov',          shirovRaw),
-  makeEntry('morozevich',      'Alexander Morozevich',         'morozevich',      morozevichRaw),
-  makeEntry('praggnanandhaa',  'Rameshbabu Praggnanandhaa',    'praggnanandhaa',  praggRaw),
-  makeEntry('duda',            'Jan-Krzysztof Duda',           'duda',            dudaRaw),
-  makeEntry('rapport',         'Richard Rapport',              'rapport',         rapportRaw),
-  makeEntry('abdusattorov',    'Nodirbek Abdusattorov',        'abdusattorov',    abdusattorovRaw),
-  makeEntry('adams',           'Michael Adams',                'adams',           adamsRaw),
+  makeEntry('nakamura',        'Hikaru Nakamura',           'nakamura',        () => import('./nakamura_games.pgn?raw').then(m => m.default)),
+  makeEntry('caruana',         'Fabiano Caruana',           'caruana',         () => import('./caruana_games.pgn?raw').then(m => m.default)),
+  makeEntry('firouzja',        'Alireza Firouzja',          'firouzja',        () => import('./firouzja_games.pgn?raw').then(m => m.default)),
+  makeEntry('nepomniachtchi',  'Ian Nepomniachtchi',        'nepomniachtchi',  () => import('./nepomniachtchi_games.pgn?raw').then(m => m.default)),
+  makeEntry('giri',            'Anish Giri',                'giri',            () => import('./giri_games.pgn?raw').then(m => m.default)),
+  makeEntry('mvl',             'Maxime Vachier-Lagrave',    'vachier',         () => import('./mvl_games.pgn?raw').then(m => m.default)),
+  makeEntry('so',              'Wesley So',                 'so',              () => import('./so_games.pgn?raw').then(m => m.default)),
+  makeEntry('aronian',         'Levon Aronian',             'aronian',         () => import('./aronian_games.pgn?raw').then(m => m.default)),
+  makeEntry('grischuk',        'Alexander Grischuk',        'grischuk',        () => import('./grischuk_games.pgn?raw').then(m => m.default)),
+  makeEntry('mamedyarov',      'Shakhriyar Mamedyarov',     'mamedyarov',      () => import('./mamedyarov_games.pgn?raw').then(m => m.default)),
+  makeEntry('karjakin',        'Sergey Karjakin',           'karjakin',        () => import('./karjakin_games.pgn?raw').then(m => m.default)),
+  makeEntry('radjabov',        'Teimour Radjabov',          'radjabov',        () => import('./radjabov_games.pgn?raw').then(m => m.default)),
+  makeEntry('gelfand',         'Boris Gelfand',             'gelfand',         () => import('./gelfand_games.pgn?raw').then(m => m.default)),
+  makeEntry('ivanchuk',        'Vassily Ivanchuk',          'ivanchuk',        () => import('./ivanchuk_games.pgn?raw').then(m => m.default)),
+  makeEntry('svidler',         'Peter Svidler',             'svidler',         () => import('./svidler_games.pgn?raw').then(m => m.default)),
+  makeEntry('leko',            'Peter Leko',                'leko',            () => import('./leko_games.pgn?raw').then(m => m.default)),
+  makeEntry('shirov',          'Alexei Shirov',             'shirov',          () => import('./shirov_games.pgn?raw').then(m => m.default)),
+  makeEntry('morozevich',      'Alexander Morozevich',      'morozevich',      () => import('./morozevich_games.pgn?raw').then(m => m.default)),
+  makeEntry('praggnanandhaa',  'Rameshbabu Praggnanandhaa', 'praggnanandhaa',  () => import('./praggnanandhaa_games.pgn?raw').then(m => m.default)),
+  makeEntry('duda',            'Jan-Krzysztof Duda',        'duda',            () => import('./duda_games.pgn?raw').then(m => m.default)),
+  makeEntry('rapport',         'Richard Rapport',           'rapport',         () => import('./rapport_games.pgn?raw').then(m => m.default)),
+  makeEntry('abdusattorov',    'Nodirbek Abdusattorov',     'abdusattorov',    () => import('./abdusattorov_games.pgn?raw').then(m => m.default)),
+  makeEntry('erigaisi',        'Arjun Erigaisi',            'erigaisi',        () => import('./erigaisi_games.pgn?raw').then(m => m.default)),
+  makeEntry('keymer',          'Vincent Keymer',            'keymer',          () => import('./keymer_games.pgn?raw').then(m => m.default)),
+  makeEntry('andreikin',       'Dmitry Andreikin',          'andreikin',       () => import('./andreikin_games.pgn?raw').then(m => m.default)),
+  makeEntry('dominguezperez',  'Leinier Dominguez Perez',   'dominguez',       () => import('./dominguezperez_games.pgn?raw').then(m => m.default)),
+  makeEntry('harikrishna',     'Pentala Harikrishna',       'harikrishna',     () => import('./harikrishna_games.pgn?raw').then(m => m.default)),
+  makeEntry('jakovenko',       'Dmitry Jakovenko',          'jakovenko',       () => import('./jakovenko_games.pgn?raw').then(m => m.default)),
+  makeEntry('kamsky',          'Gata Kamsky',               'kamsky',          () => import('./kamsky_games.pgn?raw').then(m => m.default)),
   // Classic legends
-  makeEntry('rubinstein',      'Akiba Rubinstein',             'rubinstein',      rubinsteinRaw),
-  makeEntry('nimzowitsch',     'Aron Nimzowitsch',             'nimzowitsch',     nimzowitschRaw),
-  makeEntry('keres',           'Paul Keres',                   'keres',           keresRaw),
-  makeEntry('bronstein',       'David Bronstein',              'bronstein',       bronsteinRaw),
-  makeEntry('geller',          'Efim Geller',                  'geller',          gellerRaw),
-  makeEntry('korchnoi',        'Viktor Korchnoi',              'korchnoi',        korchnoisRaw),
-  makeEntry('larsen',          'Bent Larsen',                  'larsen',          larsenRaw),
-  makeEntry('portisch',        'Lajos Portisch',               'portisch',        portischRaw),
-  makeEntry('timman',          'Jan Timman',                   'timman',          timmanRaw),
-  makeEntry('polgarj',         'Judit Polgar',                 'polgar',          polgarjRaw),
-  makeEntry('short',           'Nigel Short',                  'short',           shortRaw),
-  makeEntry('nunn',            'John Nunn',                    'nunn',            nunnRaw),
+  makeEntry('rubinstein',      'Akiba Rubinstein',          'rubinstein',      () => import('./rubinstein_games.pgn?raw').then(m => m.default)),
+  makeEntry('nimzowitsch',     'Aron Nimzowitsch',          'nimzowitsch',     () => import('./nimzowitsch_games.pgn?raw').then(m => m.default)),
+  makeEntry('keres',           'Paul Keres',                'keres',           () => import('./keres_games.pgn?raw').then(m => m.default)),
+  makeEntry('bronstein',       'David Bronstein',           'bronstein',       () => import('./bronstein_games.pgn?raw').then(m => m.default)),
+  makeEntry('geller',          'Efim Geller',               'geller',          () => import('./geller_games.pgn?raw').then(m => m.default)),
+  makeEntry('korchnoi',        'Viktor Korchnoi',           'korchnoi',        () => import('./korchnoi_games.pgn?raw').then(m => m.default)),
+  makeEntry('larsen',          'Bent Larsen',               'larsen',          () => import('./larsen_games.pgn?raw').then(m => m.default)),
+  makeEntry('portisch',        'Lajos Portisch',            'portisch',        () => import('./portisch_games.pgn?raw').then(m => m.default)),
+  makeEntry('timman',          'Jan Timman',                'timman',          () => import('./timman_games.pgn?raw').then(m => m.default)),
+  makeEntry('polgarj',         'Judit Polgar',              'polgar',          () => import('./polgarj_games.pgn?raw').then(m => m.default)),
+  makeEntry('short',           'Nigel Short',               'short',           () => import('./short_games.pgn?raw').then(m => m.default)),
+  makeEntry('nunn',            'John Nunn',                 'nunn',            () => import('./nunn_games.pgn?raw').then(m => m.default)),
+  makeEntry('adams',           'Michael Adams',             'adams',           () => import('./adams_games.pgn?raw').then(m => m.default)),
+  makeEntry('gligoric',        'Svetozar Gligoric',         'gligoric',        () => import('./gligoric_games.pgn?raw').then(m => m.default)),
+  makeEntry('taimanov',        'Mark Taimanov',             'taimanov',        () => import('./taimanov_games.pgn?raw').then(m => m.default)),
+  makeEntry('polugaevsky',     'Lev Polugaevsky',           'polugaevsky',     () => import('./polugaevsky_games.pgn?raw').then(m => m.default)),
+  makeEntry('szabo',           'Laszlo Szabo',              'szabo',           () => import('./szabo_games.pgn?raw').then(m => m.default)),
+  makeEntry('reshevsky',       'Samuel Reshevsky',          'reshevsky',       () => import('./reshevsky_games.pgn?raw').then(m => m.default)),
+  makeEntry('najdorf',         'Miguel Najdorf',            'najdorf',         () => import('./najdorf_games.pgn?raw').then(m => m.default)),
+  makeEntry('boleslavsky',     'Isaac Boleslavsky',         'boleslavsky',     () => import('./boleslavsky_games.pgn?raw').then(m => m.default)),
+  makeEntry('kotov',           'Alexander Kotov',           'kotov',           () => import('./kotov_games.pgn?raw').then(m => m.default)),
+  makeEntry('smirin',          'Ilia Smirin',               'smirin',          () => import('./smirin_games.pgn?raw').then(m => m.default)),
+  // Historical masters
+  makeEntry('anderssen',       'Adolf Anderssen',           'anderssen',       () => import('./anderssen_games.pgn?raw').then(m => m.default)),
+  makeEntry('paulsen',         'Louis Paulsen',             'paulsen',         () => import('./paulsen_games.pgn?raw').then(m => m.default)),
+  makeEntry('bird',            'Henry Bird',                'bird',            () => import('./bird_games.pgn?raw').then(m => m.default)),
+  makeEntry('blackburne',      'Joseph Blackburne',         'blackburne',      () => import('./blackburne_games.pgn?raw').then(m => m.default)),
+  makeEntry('mackenzie',       'George MacKenzie',          'mackenzie',       () => import('./mackenzie_games.pgn?raw').then(m => m.default)),
+  makeEntry('zukertort',       'Johannes Zukertort',        'zukertort',       () => import('./zukertort_games.pgn?raw').then(m => m.default)),
+  makeEntry('gunsberg',        'Isidor Gunsberg',           'gunsberg',        () => import('./gunsberg_games.pgn?raw').then(m => m.default)),
+  makeEntry('chigorin',        'Mikhail Chigorin',          'chigorin',        () => import('./chigorin_games.pgn?raw').then(m => m.default)),
+  makeEntry('janowski',        'David Janowski',            'janowski',        () => import('./janowski_games.pgn?raw').then(m => m.default)),
+  makeEntry('schlechter',      'Carl Schlechter',           'schlechter',      () => import('./schlechter_games.pgn?raw').then(m => m.default)),
+  makeEntry('pillsbury',       'Harry Pillsbury',           'pillsbury',       () => import('./pillsbury_games.pgn?raw').then(m => m.default)),
+  makeEntry('marshall',        'Frank Marshall',            'marshall',        () => import('./marshall_games.pgn?raw').then(m => m.default)),
+  makeEntry('tarrasch',        'Siegbert Tarrasch',         'tarrasch',        () => import('./tarrasch_games.pgn?raw').then(m => m.default)),
+  makeEntry('maroczy',         'Geza Maroczy',              'maroczy',         () => import('./maroczy_games.pgn?raw').then(m => m.default)),
+  makeEntry('bernstein',       'Ossip Bernstein',           'bernstein',       () => import('./bernstein_games.pgn?raw').then(m => m.default)),
+  makeEntry('breyer',          'Gyula Breyer',              'breyer',          () => import('./breyer_games.pgn?raw').then(m => m.default)),
+  makeEntry('bogoljubow',      'Efim Bogoljubow',           'bogoljubow',      () => import('./bogoljubow_games.pgn?raw').then(m => m.default)),
+  makeEntry('teichmann',       'Richard Teichmann',         'teichmann',       () => import('./teichmann_games.pgn?raw').then(m => m.default)),
+  makeEntry('reti',            'Richard Reti',              'reti',            () => import('./reti_games.pgn?raw').then(m => m.default)),
+  makeEntry('spielmann',       'Rudolf Spielmann',          'spielmann',       () => import('./spielmann_games.pgn?raw').then(m => m.default)),
+  makeEntry('tartakower',      'Savielly Tartakower',       'tartakower',      () => import('./tartakower_games.pgn?raw').then(m => m.default)),
+  makeEntry('saemisch',        'Friedrich Saemisch',        'saemisch',        () => import('./saemisch_games.pgn?raw').then(m => m.default)),
+  makeEntry('lilienthal',      'Andre Lilienthal',          'lilienthal',      () => import('./lilienthal_games.pgn?raw').then(m => m.default)),
+  makeEntry('flohr',           'Salo Flohr',                'flohr',           () => import('./flohr_games.pgn?raw').then(m => m.default)),
+  makeEntry('stahlberg',       'Gideon Stahlberg',          'stahlberg',       () => import('./stahlberg_games.pgn?raw').then(m => m.default)),
+  makeEntry('horwitz',         'Bernhard Horwitz',          'horwitz',         () => import('./horwitz_games.pgn?raw').then(m => m.default)),
+  makeEntry('staunton',        'Howard Staunton',           'staunton',        () => import('./staunton_games.pgn?raw').then(m => m.default)),
+  makeEntry('philidor',        'Francois Philidor',         'philidor',        () => import('./philidor_games.pgn?raw').then(m => m.default)),
+  makeEntry('mcdonnell',       'Alexander McDonnell',       'mcdonnell',       () => import('./mcdonnell_games.pgn?raw').then(m => m.default)),
+  makeEntry('delabourdonnais', 'Louis de La Bourdonnais',   'bourdonnais',     () => import('./delabourdonnais_games.pgn?raw').then(m => m.default)),
+  makeEntry('levenfish',       'Grigory Levenfish',         'levenfish',       () => import('./levenfish_games.pgn?raw').then(m => m.default)),
+  makeEntry('sultankhan',      'Mir Sultan Khan',           'sultan',          () => import('./sultankhan_games.pgn?raw').then(m => m.default)),
+  // All others alphabetically
+  makeEntry('akobian',         'Varuzhan Akobian',          'akobian',         () => import('./akobian_games.pgn?raw').then(m => m.default)),
+  makeEntry('akopian',         'Vladimir Akopian',          'akopian',         () => import('./akopian_games.pgn?raw').then(m => m.default)),
+  makeEntry('alburt',          'Lev Alburt',                'alburt',          () => import('./alburt_games.pgn?raw').then(m => m.default)),
+  makeEntry('alekseev',        'Evgeny Alekseev',           'alekseev',        () => import('./alekseev_games.pgn?raw').then(m => m.default)),
+  makeEntry('almasi',          'Zoltan Almasi',             'almasi',          () => import('./almasi_games.pgn?raw').then(m => m.default)),
+  makeEntry('andersson',       'Ulf Andersson',             'andersson',       () => import('./andersson_games.pgn?raw').then(m => m.default)),
+  makeEntry('ashley',          'Maurice Ashley',            'ashley',          () => import('./ashley_games.pgn?raw').then(m => m.default)),
+  makeEntry('averbakh',        'Yuri Averbakh',             'averbakh',        () => import('./averbakh_games.pgn?raw').then(m => m.default)),
+  makeEntry('azmaiparashvili', 'Zurab Azmaiparashvili',     'azmaiparashvili', () => import('./azmaiparashvili_games.pgn?raw').then(m => m.default)),
+  makeEntry('bacrot',          'Etienne Bacrot',            'bacrot',          () => import('./bacrot_games.pgn?raw').then(m => m.default)),
+  makeEntry('bareev',          'Evgeny Bareev',             'bareev',          () => import('./bareev_games.pgn?raw').then(m => m.default)),
+  makeEntry('becerrarivero',   'Julio Becerra Rivero',      'becerra',         () => import('./becerrarivero_games.pgn?raw').then(m => m.default)),
+  makeEntry('beliavsky',       'Alexander Beliavsky',       'beliavsky',       () => import('./beliavsky_games.pgn?raw').then(m => m.default)),
+  makeEntry('benjamin',        'Joel Benjamin',             'benjamin',        () => import('./benjamin_games.pgn?raw').then(m => m.default)),
+  makeEntry('benko',           'Pal Benko',                 'benko',           () => import('./benko_games.pgn?raw').then(m => m.default)),
+  makeEntry('berliner',        'Hans Berliner',             'berliner',        () => import('./berliner_games.pgn?raw').then(m => m.default)),
+  makeEntry('bisguier',        'Arthur Bisguier',           'bisguier',        () => import('./bisguier_games.pgn?raw').then(m => m.default)),
+  makeEntry('blatny',          'Pavel Blatny',              'blatny',          () => import('./blatny_games.pgn?raw').then(m => m.default)),
+  makeEntry('bologan',         'Viktor Bologan',            'bologan',         () => import('./bologan_games.pgn?raw').then(m => m.default)),
+  makeEntry('browne',          'Walter Browne',             'browne',          () => import('./browne_games.pgn?raw').then(m => m.default)),
+  makeEntry('bruzon',          'Lazaro Bruzon',             'bruzon',          () => import('./bruzon_games.pgn?raw').then(m => m.default)),
+  makeEntry('bu',              'Bu Xiangzhi',               'bu',              () => import('./bu_games.pgn?raw').then(m => m.default)),
+  makeEntry('byrne',           'Robert Byrne',              'byrne',           () => import('./byrne_games.pgn?raw').then(m => m.default)),
+  makeEntry('chiburdanidze',   'Maia Chiburdanidze',        'chiburdanidze',   () => import('./chiburdanidze_games.pgn?raw').then(m => m.default)),
+  makeEntry('christiansen',    'Larry Christiansen',        'christiansen',    () => import('./christiansen_games.pgn?raw').then(m => m.default)),
+  makeEntry('defirmian',       'Nick DeFirmian',            'defirmian',       () => import('./defirmian_games.pgn?raw').then(m => m.default)),
+  makeEntry('denker',          'Arnold Denker',             'denker',          () => import('./denker_games.pgn?raw').then(m => m.default)),
+  makeEntry('dreev',           'Alexey Dreev',              'dreev',           () => import('./dreev_games.pgn?raw').then(m => m.default)),
+  makeEntry('dzindzichashvili','Roman Dzindzichashvili',    'dzindzichashvili',() => import('./dzindzichashvili_games.pgn?raw').then(m => m.default)),
+  makeEntry('ehlvest',         'Jaan Ehlvest',              'ehlvest',         () => import('./ehlvest_games.pgn?raw').then(m => m.default)),
+  makeEntry('eljanov',         'Pavel Eljanov',             'eljanov',         () => import('./eljanov_games.pgn?raw').then(m => m.default)),
+  makeEntry('evans',           'Larry Evans',               'evans',           () => import('./evans_games.pgn?raw').then(m => m.default)),
+  makeEntry('fedorowicz',      'John Fedorowicz',           'fedorowicz',      () => import('./fedorowicz_games.pgn?raw').then(m => m.default)),
+  makeEntry('fine',            'Reuben Fine',               'fine',            () => import('./fine_games.pgn?raw').then(m => m.default)),
+  makeEntry('finegold',        'Benjamin Finegold',         'finegold',        () => import('./finegold_games.pgn?raw').then(m => m.default)),
+  makeEntry('fishbein',        'Alexander Fishbein',        'fishbein',        () => import('./fishbein_games.pgn?raw').then(m => m.default)),
+  makeEntry('gaprindashvili',  'Nona Gaprindashvili',       'gaprindashvili',  () => import('./gaprindashvili_games.pgn?raw').then(m => m.default)),
+  makeEntry('gashimov',        'Vugar Gashimov',            'gashimov',        () => import('./gashimov_games.pgn?raw').then(m => m.default)),
+  makeEntry('georgiev',        'Kiril Georgiev',            'georgiev',        () => import('./georgiev_games.pgn?raw').then(m => m.default)),
+  makeEntry('goldin',          'Alexander Goldin',          'goldin',          () => import('./goldin_games.pgn?raw').then(m => m.default)),
+  makeEntry('grandazuniga',    'Julio Granda Zuniga',       'granda',          () => import('./grandazuniga_games.pgn?raw').then(m => m.default)),
+  makeEntry('gulko',           'Boris Gulko',               'gulko',           () => import('./gulko_games.pgn?raw').then(m => m.default)),
+  makeEntry('gurevichd',       'Dmitry Gurevich',           'gurevich,d',      () => import('./gurevichd_games.pgn?raw').then(m => m.default)),
+  makeEntry('gurevichm',       'Mikhail Gurevich',          'gurevich,m',      () => import('./gurevichm_games.pgn?raw').then(m => m.default)),
+  makeEntry('hort',            'Vlastimil Hort',            'hort',            () => import('./hort_games.pgn?raw').then(m => m.default)),
+  makeEntry('hou',             'Hou Yifan',                 'hou',             () => import('./hou_games.pgn?raw').then(m => m.default)),
+  makeEntry('huebner',         'Robert Huebner',            'huebner',         () => import('./huebner_games.pgn?raw').then(m => m.default)),
+  makeEntry('ibragimov',       'Ildar Ibragimov',           'ibragimov',       () => import('./ibragimov_games.pgn?raw').then(m => m.default)),
+  makeEntry('illescascordoba', 'Miguel Illescas Cordoba',   'illescas',        () => import('./illescascordoba_games.pgn?raw').then(m => m.default)),
+  makeEntry('inarkiev',        'Ernesto Inarkiev',          'inarkiev',        () => import('./inarkiev_games.pgn?raw').then(m => m.default)),
+  makeEntry('ivanova',         'Alexander Ivanov',          'ivanov,a',        () => import('./ivanova_games.pgn?raw').then(m => m.default)),
+  makeEntry('ivanovi',         'Igor Ivanov',               'ivanov,i',        () => import('./ivanovi_games.pgn?raw').then(m => m.default)),
+  makeEntry('ivkov',           'Borislav Ivkov',            'ivkov',           () => import('./ivkov_games.pgn?raw').then(m => m.default)),
+  makeEntry('jobava',          'Baadur Jobava',             'jobava',          () => import('./jobava_games.pgn?raw').then(m => m.default)),
+  makeEntry('jussupow',        'Artur Jussupow',            'jussupow',        () => import('./jussupow_games.pgn?raw').then(m => m.default)),
+  makeEntry('kaidanov',        'Gregory Kaidanov',          'kaidanov',        () => import('./kaidanov_games.pgn?raw').then(m => m.default)),
+  makeEntry('kasimdzhanov',    'Rustam Kasimdzhanov',       'kasimdzhanov',    () => import('./kasimdzhanov_games.pgn?raw').then(m => m.default)),
+  makeEntry('kavalek',         'Lubomir Kavalek',           'kavalek',         () => import('./kavalek_games.pgn?raw').then(m => m.default)),
+  makeEntry('khalifman',       'Alexander Khalifman',       'khalifman',       () => import('./khalifman_games.pgn?raw').then(m => m.default)),
+  makeEntry('kholmov',         'Ratmir Kholmov',            'kholmov',         () => import('./kholmov_games.pgn?raw').then(m => m.default)),
+  makeEntry('koneru',          'Koneru Humpy',              'koneru',          () => import('./koneru_games.pgn?raw').then(m => m.default)),
+  makeEntry('korobov',         'Anton Korobov',             'korobov',         () => import('./korobov_games.pgn?raw').then(m => m.default)),
+  makeEntry('kosteniuk',       'Alexandra Kosteniuk',       'kosteniuk',       () => import('./kosteniuk_games.pgn?raw').then(m => m.default)),
+  makeEntry('krasenkow',       'Michal Krasenkow',          'krasenkow',       () => import('./krasenkow_games.pgn?raw').then(m => m.default)),
+  makeEntry('krush',           'Irina Krush',               'krush',           () => import('./krush_games.pgn?raw').then(m => m.default)),
+  makeEntry('kudrin',          'Sergey Kudrin',             'kudrin',          () => import('./kudrin_games.pgn?raw').then(m => m.default)),
+  makeEntry('lahno',           'Kateryna Lahno',            'lahno',           () => import('./lahno_games.pgn?raw').then(m => m.default)),
+  makeEntry('lautier',         'Joel Lautier',              'lautier',         () => import('./lautier_games.pgn?raw').then(m => m.default)),
+  makeEntry('le',              'Le Quang Liem',             'le quang',        () => import('./le_games.pgn?raw').then(m => m.default)),
+  makeEntry('li',              'Li Chao',                   'li chao',         () => import('./li_games.pgn?raw').then(m => m.default)),
+  makeEntry('ljubojevic',      'Ljubomir Ljubojevic',       'ljubojevic',      () => import('./ljubojevic_games.pgn?raw').then(m => m.default)),
+  makeEntry('lputian',         'Smbat Lputian',             'lputian',         () => import('./lputian_games.pgn?raw').then(m => m.default)),
+  makeEntry('malakhov',        'Vladimir Malakhov',         'malakhov',        () => import('./malakhov_games.pgn?raw').then(m => m.default)),
+  makeEntry('mcshane',         'Luke McShane',              'mcshane',         () => import('./mcshane_games.pgn?raw').then(m => m.default)),
+  makeEntry('mecking',         'Henrique Mecking',          'mecking',         () => import('./mecking_games.pgn?raw').then(m => m.default)),
+  makeEntry('mikenas',         'Vladas Mikenas',            'mikenas',         () => import('./mikenas_games.pgn?raw').then(m => m.default)),
+  makeEntry('miles',           'Anthony Miles',             'miles',           () => import('./miles_games.pgn?raw').then(m => m.default)),
+  makeEntry('milov',           'Vadim Milov',               'milov',           () => import('./milov_games.pgn?raw').then(m => m.default)),
+  makeEntry('motylev',         'Alexander Motylev',         'motylev',         () => import('./motylev_games.pgn?raw').then(m => m.default)),
+  makeEntry('movsesian',       'Sergei Movsesian',          'movsesian',       () => import('./movsesian_games.pgn?raw').then(m => m.default)),
+  makeEntry('muzychuk',        'Mariya Muzychuk',           'muzychuk',        () => import('./muzychuk_games.pgn?raw').then(m => m.default)),
+  makeEntry('najer',           'Evgeny Najer',              'najer',           () => import('./najer_games.pgn?raw').then(m => m.default)),
+  makeEntry('navara',          'David Navara',              'navara',          () => import('./navara_games.pgn?raw').then(m => m.default)),
+  makeEntry('negi',            'Parimarjan Negi',           'negi',            () => import('./negi_games.pgn?raw').then(m => m.default)),
+  makeEntry('ni',              'Ni Hua',                    'ni hua',          () => import('./ni_games.pgn?raw').then(m => m.default)),
+  makeEntry('nielsen',         'Peter Nielsen',             'nielsen',         () => import('./nielsen_games.pgn?raw').then(m => m.default)),
+  makeEntry('nikolic',         'Predrag Nikolic',           'nikolic',         () => import('./nikolic_games.pgn?raw').then(m => m.default)),
+  makeEntry('nisipeanu',       'Liviu-Dieter Nisipeanu',    'nisipeanu',       () => import('./nisipeanu_games.pgn?raw').then(m => m.default)),
+  makeEntry('novikov',         'Igor Novikov',              'novikov',         () => import('./novikov_games.pgn?raw').then(m => m.default)),
+  makeEntry('olafsson',        'Fridrik Olafsson',          'olafsson',        () => import('./olafsson_games.pgn?raw').then(m => m.default)),
+  makeEntry('oll',             'Lembit Oll',                'oll',             () => import('./oll_games.pgn?raw').then(m => m.default)),
+  makeEntry('onischuk',        'Alexander Onischuk',        'onischuk',        () => import('./onischuk_games.pgn?raw').then(m => m.default)),
+  makeEntry('pachman',         'Ludek Pachman',             'pachman',         () => import('./pachman_games.pgn?raw').then(m => m.default)),
+  makeEntry('paehtz',          'Elisabeth Paehtz',          'paehtz',          () => import('./paehtz_games.pgn?raw').then(m => m.default)),
+  makeEntry('panno',           'Oscar Panno',               'panno',           () => import('./panno_games.pgn?raw').then(m => m.default)),
+  makeEntry('pilnik',          'Herman Pilnik',             'pilnik',          () => import('./pilnik_games.pgn?raw').then(m => m.default)),
+  makeEntry('polgars',         'Sofia Polgar',              'polgar,s',        () => import('./polgars_games.pgn?raw').then(m => m.default)),
+  makeEntry('polgarz',         'Zsuzsa Polgar',             'polgar,z',        () => import('./polgarz_games.pgn?raw').then(m => m.default)),
+  makeEntry('ponomariov',      'Ruslan Ponomariov',         'ponomariov',      () => import('./ponomariov_games.pgn?raw').then(m => m.default)),
+  makeEntry('psakhis',         'Lev Psakhis',               'psakhis',         () => import('./psakhis_games.pgn?raw').then(m => m.default)),
+  makeEntry('quinteros',       'Miguel Quinteros',          'quinteros',       () => import('./quinteros_games.pgn?raw').then(m => m.default)),
+  makeEntry('ribli',           'Zoltan Ribli',              'ribli',           () => import('./ribli_games.pgn?raw').then(m => m.default)),
+  makeEntry('rohde',           'Michael Rohde',             'rohde',           () => import('./rohde_games.pgn?raw').then(m => m.default)),
+  makeEntry('rublevsky',       'Sergei Rublevsky',          'rublevsky',       () => import('./rublevsky_games.pgn?raw').then(m => m.default)),
+  makeEntry('sakaev',          'Konstantin Sakaev',         'sakaev',          () => import('./sakaev_games.pgn?raw').then(m => m.default)),
+  makeEntry('salov',           'Valery Salov',              'salov',           () => import('./salov_games.pgn?raw').then(m => m.default)),
+  makeEntry('sasikiran',       'Krishnan Sasikiran',        'sasikiran',       () => import('./sasikiran_games.pgn?raw').then(m => m.default)),
+  makeEntry('seirawan',        'Yasser Seirawan',           'seirawan',        () => import('./seirawan_games.pgn?raw').then(m => m.default)),
+  makeEntry('serper',          'Gregory Serper',            'serper',          () => import('./serper_games.pgn?raw').then(m => m.default)),
+  makeEntry('shabalov',        'Alexander Shabalov',        'shabalov',        () => import('./shabalov_games.pgn?raw').then(m => m.default)),
+  makeEntry('shamkovich',      'Leonid Shamkovich',         'shamkovich',      () => import('./shamkovich_games.pgn?raw').then(m => m.default)),
+  makeEntry('shulman',         'Yury Shulman',              'shulman',         () => import('./shulman_games.pgn?raw').then(m => m.default)),
+  makeEntry('sokolov',         'Ivan Sokolov',              'sokolov',         () => import('./sokolov_games.pgn?raw').then(m => m.default)),
+  makeEntry('soltis',          'Andrew Soltis',             'soltis',          () => import('./soltis_games.pgn?raw').then(m => m.default)),
+  makeEntry('speelman',        'Jonathan Speelman',         'speelman',        () => import('./speelman_games.pgn?raw').then(m => m.default)),
+  makeEntry('stefanova',       'Antoaneta Stefanova',       'stefanova',       () => import('./stefanova_games.pgn?raw').then(m => m.default)),
+  makeEntry('stein',           'Leonid Stein',              'stein',           () => import('./stein_games.pgn?raw').then(m => m.default)),
+  makeEntry('suetin',          'Alexey Suetin',             'suetin',          () => import('./suetin_games.pgn?raw').then(m => m.default)),
+  makeEntry('sutovsky',        'Emil Sutovsky',             'sutovsky',        () => import('./sutovsky_games.pgn?raw').then(m => m.default)),
+  makeEntry('tiviakov',        'Sergei Tiviakov',           'tiviakov',        () => import('./tiviakov_games.pgn?raw').then(m => m.default)),
+  makeEntry('tkachiev',        'Vladislav Tkachiev',        'tkachiev',        () => import('./tkachiev_games.pgn?raw').then(m => m.default)),
+  makeEntry('tomashevsky',     'Evgeny Tomashevsky',        'tomashevsky',     () => import('./tomashevsky_games.pgn?raw').then(m => m.default)),
+  makeEntry('torrerepetto',    'Carlos Torre Repetto',      'torre',           () => import('./torrerepetto_games.pgn?raw').then(m => m.default)),
+  makeEntry('uhlmann',         'Wolfgang Uhlmann',          'uhlmann',         () => import('./uhlmann_games.pgn?raw').then(m => m.default)),
+  makeEntry('unzicker',        'Wolfgang Unzicker',         'unzicker',        () => import('./unzicker_games.pgn?raw').then(m => m.default)),
+  makeEntry('ushenina',        'Anna Ushenina',             'ushenina',        () => import('./ushenina_games.pgn?raw').then(m => m.default)),
+  makeEntry('vaganian',        'Rafael Vaganian',           'vaganian',        () => import('./vaganian_games.pgn?raw').then(m => m.default)),
+  makeEntry('vallejopons',     'Francisco Vallejo Pons',    'vallejo',         () => import('./vallejopons_games.pgn?raw').then(m => m.default)),
+  makeEntry('vanwely',         'Loek Van Wely',             'van wely',        () => import('./vanwely_games.pgn?raw').then(m => m.default)),
+  makeEntry('vitiugov',        'Nikita Vitiugov',           'vitiugov',        () => import('./vitiugov_games.pgn?raw').then(m => m.default)),
+  makeEntry('volokitin',       'Andrei Volokitin',          'volokitin',       () => import('./volokitin_games.pgn?raw').then(m => m.default)),
+  makeEntry('waitzkin',        'Joshua Waitzkin',           'waitzkin',        () => import('./waitzkin_games.pgn?raw').then(m => m.default)),
+  makeEntry('wang',            'Wang Yue',                  'wang yue',        () => import('./wang_games.pgn?raw').then(m => m.default)),
+  makeEntry('wangh',           'Wang Hao',                  'wang hao',        () => import('./wangh_games.pgn?raw').then(m => m.default)),
+  makeEntry('wei',             'Wei Yi',                    'wei',             () => import('./wei_games.pgn?raw').then(m => m.default)),
+  makeEntry('winawer',         'Simon Winawer',             'winawer',         () => import('./winawer_games.pgn?raw').then(m => m.default)),
+  makeEntry('wojtaszek',       'Radoslaw Wojtaszek',        'wojtaszek',       () => import('./wojtaszek_games.pgn?raw').then(m => m.default)),
+  makeEntry('wojtkiewicz',     'Aleksander Wojtkiewicz',    'wojtkiewicz',     () => import('./wojtkiewicz_games.pgn?raw').then(m => m.default)),
+  makeEntry('wolff',           'Patrick Wolff',             'wolff',           () => import('./wolff_games.pgn?raw').then(m => m.default)),
+  makeEntry('xie',             'Xie Jun',                   'xie',             () => import('./xie_games.pgn?raw').then(m => m.default)),
+  makeEntry('xu',              'Xu Yuhua',                  'xu',              () => import('./xu_games.pgn?raw').then(m => m.default)),
+  makeEntry('ye',              'Ye Jiangchuan',             'ye',              () => import('./ye_games.pgn?raw').then(m => m.default)),
+  makeEntry('yermolinsky',     'Alex Yermolinsky',          'yermolinsky',     () => import('./yermolinsky_games.pgn?raw').then(m => m.default)),
+  makeEntry('yu',              'Yu Yangyi',                 'yu yangyi',       () => import('./yu_games.pgn?raw').then(m => m.default)),
+  makeEntry('yudasin',         'Leonid Yudasin',            'yudasin',         () => import('./yudasin_games.pgn?raw').then(m => m.default)),
+  makeEntry('zhu',             'Zhu Chen',                  'zhu',             () => import('./zhu_games.pgn?raw').then(m => m.default)),
+  makeEntry('zvjaginsev',      'Vadim Zvjaginsev',          'zvjaginsev',      () => import('./zvjaginsev_games.pgn?raw').then(m => m.default)),
 ];
 
-export const TOTAL_GAME_COUNT = PLAYER_REGISTRY.reduce((s, p) => s + p.gameCount, 0);
+export const TOTAL_GAME_COUNT = 525802;
 
 export function findPlayerEntry(playerId: string): PlayerEntry | undefined {
   return PLAYER_REGISTRY.find(p => p.id === playerId);
 }
 
-export function findGameAcrossPlayers(gameId: string): ClassicalGame | undefined {
+export async function findGameAcrossPlayers(gameId: string): Promise<ClassicalGame | undefined> {
   for (const entry of PLAYER_REGISTRY) {
     if (gameId.startsWith(entry.id + '-')) {
       return entry.findGame(gameId);

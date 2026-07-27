@@ -74,10 +74,11 @@ export default function PlayerPage() {
     setGames([]);
     setLoading(true);
     if (!player) { setLoading(false); return; }
-    setTimeout(() => {
-      setGames(player.getGames());
-      setLoading(false);
-    }, 0);
+    let cancelled = false;
+    player.getGames().then(gs => {
+      if (!cancelled) { setGames(gs); setLoading(false); }
+    });
+    return () => { cancelled = true; };
   }, [player]);
 
   const openingOptions = useMemo(() => {
