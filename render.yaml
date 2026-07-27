@@ -1,0 +1,36 @@
+services:
+  - type: web
+    name: chesstise-api
+    runtime: dotnet
+    region: frankfurt
+    plan: free
+    rootDir: backend/ChessTise.API
+    buildCommand: dotnet publish -c Release -o out
+    startCommand: dotnet out/ChessTise.API.dll
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ConnectionStrings__DefaultConnection
+        fromDatabase:
+          name: chesstise-db
+          property: connectionString
+      - key: Jwt__Key
+        sync: false          # set manually in Render dashboard
+      - key: Jwt__Issuer
+        value: chesstise-api
+      - key: Jwt__Audience
+        value: chesstise-app
+      - key: Jwt__ExpiryHours
+        value: "72"
+      - key: Google__ClientId
+        sync: false
+      - key: Groq__ApiKey
+        sync: false
+    healthCheckPath: /api/health
+
+databases:
+  - name: chesstise-db
+    region: frankfurt
+    plan: free
+    databaseName: chesstise
+    user: chesstise

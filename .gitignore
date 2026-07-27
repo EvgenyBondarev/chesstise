@@ -1,0 +1,16 @@
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env.local
+
+# Backend build artifacts
+backend/**/bin/
+backend/**/obj/
+
+# Local secrets — copy appsettings.json and fill in real values locally
+backend/ChessTise.API/appsettings.Development.json
+
+# Misc
+.DS_Store
+Thumbs.db
+*.user
