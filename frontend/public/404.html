@@ -4,14 +4,15 @@
   <meta charset="utf-8">
   <title>Chesstíse</title>
   <script>
-    // GitHub Pages SPA redirect: encode the path into a query string
-    // so the main index.html can restore it with history.replaceState.
+    // GitHub Pages SPA redirect (rafgraph technique)
+    // Encodes path into query so index.html can restore it via history.replaceState
     var l = window.location;
-    var base = '/chesstise/';
-    var path = l.pathname.slice(base.length);
     l.replace(
-      l.protocol + '//' + l.host + base + '?/' + path +
-      (l.search ? '&' + l.search.slice(1) : '') + l.hash
+      l.protocol + '//' + l.host +
+      l.pathname.split('/').slice(0, 2).join('/') + '/?/' +
+      l.pathname.slice(1).split('/').slice(1).join('/').replace(/&/g, '~and~') +
+      (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+      l.hash
     );
   </script>
 </head>

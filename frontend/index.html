@@ -13,17 +13,16 @@
     <div id="root"></div>
     <script>
       // Restore path encoded by 404.html for GitHub Pages SPA routing
-      (function () {
-        var search = window.location.search;
-        if (search.slice(1, 2) === '/') {
-          var path = search.slice(1);
-          var amp  = path.indexOf('&');
-          var rest = amp > -1 ? '?' + path.slice(amp + 1) : '';
+      (function (l) {
+        if (l.search[1] === '/') {
+          var decoded = l.search.slice(1).split('&').map(function (s) {
+            return s.replace(/~and~/g, '&');
+          }).join('?');
           history.replaceState(null, null,
-            window.location.pathname + (amp > -1 ? path.slice(0, amp) : path) + rest + window.location.hash
+            l.pathname.slice(0, -1) + decoded + l.hash
           );
         }
-      })();
+      }(window.location));
     </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
