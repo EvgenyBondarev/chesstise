@@ -61,7 +61,8 @@ export async function fetchGeminiEval(
   suggestedMoves: string[],
 ): Promise<string | null> {
   const prompt =
-    `You are a chess coach. The student suggests ${suggestedMoves.join(', ')}.\n` +
+    `You are a chess coach explaining to a 1200-rated player who knows basic tactics but not deep strategy. ` +
+    `The student suggests ${suggestedMoves.join(', ')}.\n` +
     `Position (FEN): ${fen}\n` +
     `Game so far: ${pgn}\n\n` +
     `Evaluate concretely: does this move win material, control a key square, or create a specific threat — name the exact square or piece. ` +
@@ -90,7 +91,8 @@ export async function fetchGroqQuestion(
   question: string,
 ): Promise<string | null> {
   const prompt =
-    `You are a chess coach. The student asks: "${question}"\n` +
+    `You are a chess coach explaining to a 1200-rated player who knows basic tactics but not deep strategy. ` +
+    `The student asks: "${question}"\n` +
     `Position (FEN): ${fen}\n` +
     `Game so far: ${pgn}\n\n` +
     `Answer with concrete details only: name specific squares and pieces (e.g. "the knight on f3"), ` +
@@ -106,7 +108,8 @@ export async function fetchGeminiExplain(
   move: string,
 ): Promise<string | null> {
   const prompt =
-    `You are a chess coach. The move ${move} was just played.\n` +
+    `You are a chess coach explaining to a 1200-rated player who knows basic tactics but not deep strategy. ` +
+    `The move ${move} was just played.\n` +
     `Position (FEN): ${fen}\n` +
     `Game so far: ${pgn}\n\n` +
     `Explain concretely: which square or piece does this move directly target or vacate, ` +
