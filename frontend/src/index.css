@@ -1716,3 +1716,40 @@ details[open] > .sidebar-group-btn::after { transform: rotate(90deg); }
   letter-spacing: 0.03em;
 }
 .board-toggle-btn:hover { color: var(--text); border-color: var(--accent); }
+
+/* ── Cross-player search ── */
+.cross-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+.cross-search-input {
+  flex: 1;
+  min-width: 140px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 0.88rem;
+  padding: 0.45rem 0.7rem;
+  outline: none;
+}
+.cross-search-input:focus { border-color: var(--accent); }
+.cross-search-input::placeholder { color: var(--muted); }
+.cross-search-vs { color: var(--muted); font-size: 0.85rem; flex-shrink: 0; }
+.cross-search-btn {
+  background: var(--accent);
+  color: #000;
+  border: none;
+  border-radius: var(--radius);
+  padding: 0.45rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.cross-search-btn:hover { opacity: 0.85; }
+.cross-search-btn:disabled { opacity: 0.5; cursor: default; }
+.cross-search-count { color: var(--muted); font-size: 0.82rem; margin-bottom: 0.75rem; }

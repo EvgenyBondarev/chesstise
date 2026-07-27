@@ -223,6 +223,7 @@ export default function Sidebar({ onSignIn }: { onSignIn: () => void }) {
       {/* ── Classical Games ── */}
       <details className="sidebar-group">
         <summary className="sidebar-group-btn">Classical Games</summary>
+        <SimpleNavItem to="/cross-search" label="⇄ Cross-player search" />
         <PlayerSearch />
       </details>
 

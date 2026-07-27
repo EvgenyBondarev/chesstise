@@ -7,6 +7,54 @@ import { useProfileStore } from '../../store/profileStore';
 type SortKey = 'year' | 'white' | 'black' | 'result' | 'event' | 'moves' | 'eco';
 type SortDir = 'asc' | 'desc';
 type ResultFilter = 'all' | 'win' | 'draw' | 'loss';
+type PatternFilter = '' | 'bishop_replaces_rook' | 'pawn_before_knight' | 'bxf3_qxf3' | 'opposite_castling';
+
+function detectPattern(moves: string[], pattern: PatternFilter): boolean {
+  if (!pattern) return true;
+  const clean = (m: string) => m.replace(/[+#]$/, '');
+
+  if (pattern === 'bishop_replaces_rook') {
+    let wCastled = false, bCastled = false;
+    for (let i = 0; i < moves.length; i++) {
+      const m = moves[i], isW = i % 2 === 0;
+      if (m === 'O-O') { if (isW) wCastled = true; else bCastled = true; }
+      if (isW && wCastled && clean(m) === 'Bf1') return true;
+      if (!isW && bCastled && clean(m) === 'Bf8') return true;
+    }
+    return false;
+  }
+
+  if (pattern === 'pawn_before_knight') {
+    let c4 = false, f4 = false;
+    for (let i = 0; i < moves.length; i += 2) {
+      const m = clean(moves[i]);
+      if (m === 'c4') c4 = true;
+      if (m === 'f4') f4 = true;
+      if (m === 'Nc3' && c4) return true;
+      if (m === 'Nf3' && f4) return true;
+    }
+    return false;
+  }
+
+  if (pattern === 'bxf3_qxf3') {
+    for (let i = 0; i < moves.length - 1; i++) {
+      if (clean(moves[i]) === 'Bxf3' && clean(moves[i + 1]) === 'Qxf3') return true;
+    }
+    return false;
+  }
+
+  if (pattern === 'opposite_castling') {
+    let wOO = false, wOOO = false, bOO = false, bOOO = false;
+    for (let i = 0; i < moves.length; i++) {
+      const m = moves[i], isW = i % 2 === 0;
+      if (m === 'O-O')   { if (isW) wOO  = true; else bOO  = true; }
+      if (m === 'O-O-O') { if (isW) wOOO = true; else bOOO = true; }
+    }
+    return (wOO && bOOO) || (wOOO && bOO);
+  }
+
+  return true;
+}
 
 function ecoToOpening(eco: string): string {
   const n = parseInt(eco.slice(1), 10);
@@ -66,7 +114,8 @@ export default function PlayerPage() {
   const [search,         setSearch]         = useState('');
   const [resultFilter,   setResultFilter]   = useState<ResultFilter>('all');
   const [openingFilter,  setOpeningFilter]  = useState('');
-  const [studiedFilter, setStudiedFilter]  = useState<'all' | 'unstudied' | 'studied'>('all');
+  const [studiedFilter,  setStudiedFilter]  = useState<'all' | 'unstudied' | 'studied'>('all');
+  const [patternFilter,  setPatternFilter]  = useState<PatternFilter>('');
   const [sortKey,        setSortKey]        = useState<SortKey>('year');
   const [sortDir,        setSortDir]        = useState<SortDir>('desc');
 
@@ -114,6 +163,7 @@ export default function PlayerPage() {
 
     if (studiedFilter === 'studied')   rows = rows.filter(g =>  markedGames.includes(g.id));
     if (studiedFilter === 'unstudied') rows = rows.filter(g => !markedGames.includes(g.id));
+    if (patternFilter) rows = rows.filter(g => detectPattern(g.moves, patternFilter));
 
     rows = [...rows].sort((a, b) => {
       let va: string | number, vb: string | number;
@@ -132,7 +182,7 @@ export default function PlayerPage() {
     });
 
     return rows;
-  }, [games, search, resultFilter, openingFilter, studiedFilter, markedGames, sortKey, sortDir, player]);
+  }, [games, search, resultFilter, openingFilter, studiedFilter, patternFilter, markedGames, sortKey, sortDir, player]);
 
   if (!player) {
     return (
@@ -212,6 +262,19 @@ export default function PlayerPage() {
                 </button>
               ))}
             </div>
+
+            <select
+              className="perspective-select"
+              value={patternFilter}
+              onChange={e => setPatternFilter(e.target.value as PatternFilter)}
+              aria-label="Filter by pattern"
+            >
+              <option value="">All patterns</option>
+              <option value="bishop_replaces_rook">Bishop replaces rook (Bf1/Bf8 after O-O)</option>
+              <option value="pawn_before_knight">Pawn before knight (c4→Nc3 or f4→Nf3)</option>
+              <option value="bxf3_qxf3">Bxf3 → Qxf3 (removes knight defender)</option>
+              <option value="opposite_castling">Opposite-side castling</option>
+            </select>
 
             <div className="player-result-filters" role="group" aria-label="Filter by study status">
               {(['all', 'unstudied', 'studied'] as const).map(f => (

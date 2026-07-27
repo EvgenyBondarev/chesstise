@@ -8,6 +8,7 @@ import OpeningDrill from './components/exercises/OpeningDrill';
 import StructureStudy from './components/exercises/StructureStudy';
 import ClassicalGame from './components/exercises/ClassicalGame';
 import PlayerPage from './components/exercises/PlayerPage';
+import CrossSearch from './components/exercises/CrossSearch';
 import EndgameStudy from './components/exercises/EndgameStudy';
 import OpeningRecall from './components/exercises/OpeningRecall';
 import CalculationTrainer from './components/exercises/CalculationTrainer';
@@ -44,6 +45,7 @@ export default function App() {
         <Route path="/openings/:id/recall" element={<OpeningRecall />} />
         <Route path="/structures/:id"      element={<StructureStudy />} />
         <Route path="/players/:playerId"   element={<PlayerPage />} />
+        <Route path="/cross-search"        element={<CrossSearch />} />
         <Route path="/games/:gameId"       element={<ClassicalGamePage />} />
         <Route path="/endgame"             element={<EndgameStudy />} />
         <Route path="/calculation"         element={<CalculationTrainer />} />
