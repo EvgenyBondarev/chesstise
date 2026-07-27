@@ -10,22 +10,30 @@ builder.Services.AddDbContext<AppDbContext>(o =>
     o.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 var jwtSection = builder.Configuration.GetSection("Jwt");
-var key = Encoding.UTF8.GetBytes(jwtSection["Key"]!);
+var jwtKeyStr  = jwtSection["Key"];
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(o =>
-    {
-        o.TokenValidationParameters = new TokenValidationParameters
+if (!string.IsNullOrEmpty(jwtKeyStr))
+{
+    var key = Encoding.UTF8.GetBytes(jwtKeyStr);
+    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(o =>
         {
-            ValidateIssuer           = true,
-            ValidateAudience         = true,
-            ValidateLifetime         = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer              = jwtSection["Issuer"],
-            ValidAudience            = jwtSection["Audience"],
-            IssuerSigningKey         = new SymmetricSecurityKey(key),
-        };
-    });
+            o.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer           = true,
+                ValidateAudience         = true,
+                ValidateLifetime         = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer              = jwtSection["Issuer"],
+                ValidAudience            = jwtSection["Audience"],
+                IssuerSigningKey         = new SymmetricSecurityKey(key),
+            };
+        });
+}
+else
+{
+    builder.Services.AddAuthentication();
+}
 
 builder.Services.AddAuthorization();
 builder.Services.AddHttpClient();
@@ -35,7 +43,10 @@ builder.Services.AddControllers()
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
-    p.WithOrigins("http://localhost:5173", "https://chesstise.app")
+    p.WithOrigins(
+        "http://localhost:5173",
+        "https://chesstise.app",
+        "https://evgenybondarev.github.io")
      .AllowAnyHeader()
      .AllowAnyMethod()));
 
@@ -47,6 +58,7 @@ using (var scope = app.Services.CreateScope())
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapGet("/api/health", () => Results.Ok(new { status = "healthy" }));
 app.MapControllers();
 
 app.Run();
