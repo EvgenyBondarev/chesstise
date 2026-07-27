@@ -1248,6 +1248,13 @@ details[open] > .sidebar-group-btn::after { transform: rotate(90deg); }
   position: relative;
 }
 
+.auth-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 1.25rem;
+  color: var(--text);
+}
+
 .auth-close {
   position: absolute;
   top: 0.75rem;
