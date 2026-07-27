@@ -36,7 +36,6 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: frontend/dist
-          cname: ${{ secrets.CNAME }}   # optional: your custom domain
 
   deploy-backend:
     name: Trigger Render redeploy
