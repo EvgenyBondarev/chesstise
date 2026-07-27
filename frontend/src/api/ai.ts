@@ -1,5 +1,3 @@
-import api from './client';
-
 export interface LichessEval {
   cp:      number | null;
   mate:    number | null;
@@ -67,14 +65,7 @@ export async function fetchGeminiEval(
     `Position FEN: ${fen}. ` +
     `The student suggests: ${suggestedMoves.join(', ')}. ` +
     `Is this a good move? What is the key idea? Answer in exactly 2 short sentences.`;
-  try {
-    const direct = await callGroq(prompt);
-    if (direct !== null) return direct;
-    const { data } = await api.post<{ text: string }>('/ai/evaluate', { fen, pgn, suggestedMoves });
-    return data.text;
-  } catch {
-    return null;
-  }
+  return callGroq(prompt);
 }
 
 export async function fetchGroqIntro(
@@ -88,14 +79,7 @@ export async function fetchGroqIntro(
     `You are a concise chess commentator. Introduce the game between ${white} and ${black}` +
     (context ? ` (${context})` : '') +
     `. Who are these players and what style of play should we expect? Answer in exactly 2 short sentences.`;
-  try {
-    const direct = await callGroq(prompt);
-    if (direct !== null) return direct;
-    const { data } = await api.post<{ text: string }>('/ai/intro', { white, black, year, event });
-    return data.text;
-  } catch {
-    return null;
-  }
+  return callGroq(prompt);
 }
 
 export async function fetchGroqQuestion(
@@ -108,14 +92,7 @@ export async function fetchGroqQuestion(
     `Position FEN: ${fen}. ` +
     `The student asks: ${question}. ` +
     `Answer concisely in 2-3 sentences.`;
-  try {
-    const direct = await callGroq(prompt);
-    if (direct !== null) return direct;
-    const { data } = await api.post<{ text: string }>('/ai/question', { fen, pgn, question });
-    return data.text;
-  } catch {
-    return null;
-  }
+  return callGroq(prompt);
 }
 
 export async function fetchGeminiExplain(
@@ -128,16 +105,7 @@ export async function fetchGeminiExplain(
     `Position FEN: ${fen}. ` +
     `The move played was ${move}. ` +
     `Explain the strategic or tactical reason in exactly 2 short sentences.`;
-  try {
-    const direct = await callGroq(prompt);
-    if (direct !== null) return direct;
-    const { data } = await api.post<{ text: string }>('/ai/explain', { fen, pgn, move });
-    return data.text;
-  } catch (err: unknown) {
-    const msg = (err as { response?: { data?: unknown } })?.response?.data;
-    if (msg && typeof msg === 'string') return `[AI error: ${msg}]`;
-    return null;
-  }
+  return callGroq(prompt);
 }
 
 export function formatEval(ev: LichessEval): string {

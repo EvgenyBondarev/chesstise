@@ -2,19 +2,11 @@ import { useState, useEffect, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import AuthModal from '../auth/AuthModal';
-import { useAuthStore } from '../../store/authStore';
-import { useProfileStore } from '../../store/profileStore';
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const [authOpen,    setAuthOpen]    = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const token           = useAuthStore(s => s.token);
-  const loadRunsFromApi = useProfileStore(s => s.loadRunsFromApi);
-  const location        = useLocation();
-
-  useEffect(() => {
-    if (token) loadRunsFromApi();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const location = useLocation();
 
   // Close sidebar on navigation (mobile)
   useEffect(() => { setSidebarOpen(false); }, [location.pathname]);
