@@ -25,25 +25,36 @@ export async function fetchLichessEval(fen: string): Promise<LichessEval | null>
   }
 }
 
-// Direct Groq call — used when VITE_GROQ_API_KEY is set, bypassing the backend
-const GROQ_KEY = (import.meta.env.VITE_GROQ_API_KEY as string | undefined) || '';
+const GROQ_KEY: string = import.meta.env.VITE_GROQ_API_KEY ?? '';
 
 async function callGroq(prompt: string): Promise<string | null> {
-  if (GROQ_KEY) {
+  if (!GROQ_KEY) {
+    console.warn('[Groq] VITE_GROQ_API_KEY not set');
+    return null;
+  }
+  try {
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${GROQ_KEY}`, 'Content-Type': 'application/json' },
+      headers: {
+        'Authorization': `Bearer ${GROQ_KEY}`,
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({
         model:      'llama-3.3-70b-versatile',
         messages:   [{ role: 'user', content: prompt }],
         max_tokens: 300,
       }),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.error('[Groq]', res.status, await res.text());
+      return null;
+    }
     const data = await res.json();
     return (data.choices?.[0]?.message?.content as string | undefined)?.trim() ?? null;
+  } catch (err) {
+    console.error('[Groq] fetch error:', err);
+    return null;
   }
-  return null;
 }
 
 export async function fetchGeminiEval(
