@@ -166,7 +166,7 @@ button { cursor: pointer; border: none; font-family: inherit; }
   align-items: flex-start;
 }
 
-.board-col { display: flex; flex-direction: column; gap: 0.75rem; width: 480px; flex-shrink: 0; overflow: hidden; }
+.board-col { display: flex; flex-direction: column; gap: 0.75rem; width: 480px; max-width: 100%; flex-shrink: 1; overflow: hidden; }
 
 /* ── Prompt card ── */
 .prompt-card {
@@ -1809,9 +1809,11 @@ details[open] > .sidebar-group-btn::after { transform: rotate(90deg); }
 
 /* ── Mobile breakpoint ── */
 @media (max-width: 640px) {
-  body { overflow: auto; }
+  html, body { overflow-x: hidden; overflow-y: auto; }
 
   .app-layout { flex-direction: column; }
+
+  .exercise-page, .board-col { max-width: 100%; }
 
   .sidebar {
     position: fixed;

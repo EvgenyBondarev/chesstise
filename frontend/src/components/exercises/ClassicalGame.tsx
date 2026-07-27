@@ -76,7 +76,7 @@ export default function ClassicalGame({ game }: { game: GameData }) {
   const [commentary, setCommentary] = useState<Commentary | null>(null);
 
   const [customQ,        setCustomQ]       = useState('');
-  const [boardWidth,     setBoardWidth]    = useState(480);
+  const [boardWidth,     setBoardWidth]    = useState(() => Math.min(480, window.innerWidth - 32));
   const lastSpokenRef    = useRef('');
   const prevQRef         = useRef('');
   const keyHandlerRef    = useRef<((e: KeyboardEvent) => void) | null>(null);
