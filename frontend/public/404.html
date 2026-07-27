@@ -4,13 +4,16 @@
   <meta charset="utf-8">
   <title>Chesstíse</title>
   <script>
-    // GitHub Pages SPA redirect (rafgraph technique)
-    // Encodes path into query so index.html can restore it via history.replaceState
+    // GitHub Pages SPA redirect.
+    // Redirects unknown paths to index.html, encoding the path so the
+    // inline script in index.html can restore it via history.replaceState.
     var l = window.location;
+    // Segment count = 1 (the repo name "chesstise" in the URL)
+    var base = l.pathname.split('/').slice(0, 2).join('/'); // e.g. /chesstise
+    var path = l.pathname.slice(base.length + 1);          // path after /chesstise/
     l.replace(
-      l.protocol + '//' + l.host +
-      l.pathname.split('/').slice(0, 2).join('/') + '/?/' +
-      l.pathname.slice(1).split('/').slice(1).join('/').replace(/&/g, '~and~') +
+      l.protocol + '//' + l.host + base + '/?/' +
+      path.replace(/&/g, '~and~') +
       (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
       l.hash
     );

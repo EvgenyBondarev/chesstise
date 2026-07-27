@@ -1,8 +1,16 @@
 import { useState } from 'react';
 import { GoogleLogin } from '@react-oauth/google';
-import { login as apiLogin, register as apiRegister, googleSignIn } from '../../api/auth';
+import { login as apiLogin, register as apiRegister } from '../../api/auth';
 import { useAuthStore } from '../../store/authStore';
 import { useProfileStore } from '../../store/profileStore';
+
+function decodeGoogleJwt(token: string): { name?: string; email?: string } {
+  try {
+    return JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+  } catch {
+    return {};
+  }
+}
 
 interface Props {
   open: boolean;
@@ -75,16 +83,9 @@ export default function AuthModal({ open, onClose }: Props) {
             width="100%"
             onSuccess={async cr => {
               if (!cr.credential) return;
-              setError('');
-              setLoading(true);
-              try {
-                const res = await googleSignIn(cr.credential);
-                await finishAuth(res.token, res.displayName);
-              } catch {
-                setError('Google sign-in failed.');
-              } finally {
-                setLoading(false);
-              }
+              const { name, email } = decodeGoogleJwt(cr.credential);
+              const displayName = name || email || 'Google User';
+              await finishAuth(cr.credential, displayName);
             }}
             onError={() => setError('Google sign-in failed.')}
           />
