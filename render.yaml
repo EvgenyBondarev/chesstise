@@ -1,12 +1,11 @@
 services:
   - type: web
     name: chesstise-api
-    runtime: dotnet
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
     region: frankfurt
     plan: free
-    rootDir: backend/ChessTise.API
-    buildCommand: dotnet publish -c Release -o out
-    startCommand: dotnet out/ChessTise.API.dll
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
@@ -15,7 +14,7 @@ services:
           name: chesstise-db
           property: connectionString
       - key: Jwt__Key
-        sync: false          # set manually in Render dashboard
+        sync: false
       - key: Jwt__Issuer
         value: chesstise-api
       - key: Jwt__Audience
