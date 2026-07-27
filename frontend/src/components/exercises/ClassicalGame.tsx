@@ -33,6 +33,37 @@ function buildPgn(moves: string[]): string {
   ).join(' ');
 }
 
+const PIECE_NAMES: Record<string, string> = { R: 'Rook', N: 'Knight', B: 'Bishop', Q: 'Queen', K: 'King' };
+
+function spokenMove(san: string): string {
+  if (san === 'O-O-O' || san === '0-0-0') return 'castles queenside';
+  if (san === 'O-O'   || san === '0-0')   return 'castles';
+  const suffix = san.endsWith('#') ? ' checkmate' : san.endsWith('+') ? ' check' : '';
+  const s = san.replace(/[+#]$/, '');
+  if (/^[a-h]/.test(s)) {
+    if (s.includes('x')) {
+      const [from, rest] = s.split('x');
+      const to = rest.replace(/=[RNBQ]/, '');
+      const promo = rest.match(/=([RNBQ])/);
+      return `${from} takes ${to}${promo ? ` promotes to ${PIECE_NAMES[promo[1]]}` : ''}${suffix}`;
+    }
+    const promo = s.match(/=([RNBQ])$/);
+    if (promo) return `${s.replace(/=.*$/, '')} promotes to ${PIECE_NAMES[promo[1]]}${suffix}`;
+    return `${s}${suffix}`;
+  }
+  const piece = PIECE_NAMES[s[0]] ?? s[0];
+  const rest  = s.slice(1);
+  if (rest.includes('x')) {
+    const xIdx = rest.indexOf('x');
+    const dis  = rest.slice(0, xIdx);
+    const dest = rest.slice(xIdx + 1);
+    return `${piece}${dis ? ' ' + dis : ''} takes ${dest}${suffix}`;
+  }
+  const dest = rest.slice(-2);
+  const dis  = rest.slice(0, -2);
+  return `${piece}${dis ? ' ' + dis : ''} to ${dest}${suffix}`;
+}
+
 interface Commentary {
   lichess: LichessEval | null;
   gemini: string | null;
@@ -44,7 +75,7 @@ export default function ClassicalGame({ game }: { game: GameData }) {
   const [plyIdx,     setPlyIdx]     = useState(0);
   const [commentary, setCommentary] = useState<Commentary | null>(null);
 
-  const [customQ,     setCustomQ]     = useState('');
+  const [customQ,       setCustomQ]       = useState('');
   const lastSpokenRef   = useRef('');
   const keyHandlerRef   = useRef<((e: KeyboardEvent) => void) | null>(null);
   const questionInputRef = useRef<HTMLInputElement>(null);
@@ -60,12 +91,12 @@ export default function ClassicalGame({ game }: { game: GameData }) {
   useEffect(() => {
     setPlyIdx(0);
     setCommentary(null);
-    say(`${game.white} versus ${game.black}. Press H to advance moves, Space for commentary.`);
+    say(`${game.white} versus ${game.black}. Press J to advance moves, A or Space for commentary.`);
   }, [game]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleJ() {
     if (plyIdx < game.moves.length) {
-      say(game.moves[plyIdx]);
+      say(spokenMove(game.moves[plyIdx]));
       setPlyIdx(p => p + 1);
       setCommentary(null);
     } else {
@@ -78,7 +109,7 @@ export default function ClassicalGame({ game }: { game: GameData }) {
       const prevIdx = plyIdx - 1;
       setPlyIdx(prevIdx);
       setCommentary(null);
-      say(prevIdx === 0 ? 'Starting position.' : `Back to move ${prevIdx}: ${game.moves[prevIdx - 1]}.`);
+      say(prevIdx === 0 ? 'Starting position.' : `Back to move ${prevIdx}: ${spokenMove(game.moves[prevIdx - 1])}.`);
     } else {
       say('Already at the start.');
     }
@@ -122,7 +153,7 @@ export default function ClassicalGame({ game }: { game: GameData }) {
       .then(gemini => {
         setCommentary({ lichess: null, gemini, loading: false });
         if (gemini) say(gemini);
-        else say('No answer available.');
+        else say('AI backend not connected.');
       })
       .catch(() => {
         setCommentary({ lichess: null, gemini: null, loading: false });
@@ -137,8 +168,8 @@ export default function ClassicalGame({ game }: { game: GameData }) {
     if (key === 'r' || key === 'R') { e.preventDefault(); speak(lastSpokenRef.current); return; }
     if (key === 'f' || key === 'F') { e.preventDefault(); handleF(); return; }
     if (key === 'j' || key === 'J') { e.preventDefault(); handleJ(); return; }
-    if (key === 'k' || key === 'K') { e.preventDefault(); handleK(); return; }
-    if (key === 'd' || key === 'D') { e.preventDefault(); questionInputRef.current?.focus(); return; }
+    if (key === 'k' || key === 'K' || key === 'a' || key === 'A' || key === ' ') { e.preventDefault(); handleK(); return; }
+    if (key === 'd' || key === 'D' || key === 's' || key === 'S') { e.preventDefault(); questionInputRef.current?.focus(); return; }
   };
 
   useEffect(() => {
@@ -202,18 +233,25 @@ export default function ClassicalGame({ game }: { game: GameData }) {
 
             {!commentary && (
               <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
-                Space = commentary · R = re-read
+                A / Space = commentary · R = re-read
               </span>
             )}
           </div>
 
           <div className="cg-pgn">
-            {game.moves.map((san, i) => (
-              <span key={i} className={`cg-pgn-move${i === plyIdx - 1 ? ' current' : ''}`}>
-                {i % 2 === 0 && <span className="cg-pgn-num">{Math.floor(i / 2) + 1}.</span>}
-                {san}
-              </span>
-            ))}
+            {Array.from({ length: Math.ceil(game.moves.length / 2) }, (_, pair) => {
+              const wi = pair * 2;
+              const bi = pair * 2 + 1;
+              return (
+                <div key={pair} className="cg-pgn-pair">
+                  <span className="cg-pgn-num">{pair + 1}.</span>
+                  <span className={`cg-pgn-move${wi === plyIdx - 1 ? ' current' : ''}`}>{game.moves[wi]}</span>
+                  {game.moves[bi] !== undefined && (
+                    <span className={`cg-pgn-move${bi === plyIdx - 1 ? ' current' : ''}`}>{game.moves[bi]}</span>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           <div className="cg-question">
@@ -224,12 +262,20 @@ export default function ClassicalGame({ game }: { game: GameData }) {
               placeholder="Ask a question about this position… (D to focus, Enter to send)"
               value={customQ}
               onChange={e => setCustomQ(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAskQuestion(); } if (e.key === 'Escape') { questionInputRef.current?.blur(); } }}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  const q = customQ.trim();
+                  if (q) say(q);
+                  handleAskQuestion();
+                }
+                if (e.key === 'Escape') { questionInputRef.current?.blur(); }
+              }}
             />
           </div>
 
           <div className="cg-legend">
-            F = back &nbsp;·&nbsp; J = next move &nbsp;·&nbsp; K = commentary &nbsp;·&nbsp; D = ask &nbsp;·&nbsp; R = re-read
+            F = back &nbsp;·&nbsp; J = next move &nbsp;·&nbsp; A / Space = commentary &nbsp;·&nbsp; D = ask &nbsp;·&nbsp; R = re-read
           </div>
         </div>
       </div>

@@ -1677,8 +1677,9 @@ details[open] > .sidebar-group-btn::after { transform: rotate(90deg); }
   white-space: normal;
   word-break: break-word;
 }
-.cg-pgn-num { color: var(--border); margin-right: 0.15rem; }
-.cg-pgn-move { display: inline; margin-right: 0.35rem; }
+.cg-pgn-pair { display: flex; gap: 0.35rem; }
+.cg-pgn-num { color: var(--border); min-width: 1.8rem; text-align: right; flex-shrink: 0; }
+.cg-pgn-move { display: inline; }
 .cg-pgn-move.current { color: var(--accent); font-weight: 700; }
 .cg-question { width: 100%; }
 .cg-question-input {
