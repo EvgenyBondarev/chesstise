@@ -1144,6 +1144,20 @@ details[open] > .sidebar-group-btn::after { transform: rotate(90deg); }
   color: var(--muted);
   overflow: hidden;
 }
+.sidebar-player-search {
+  display: block;
+  width: calc(100% - 2rem);
+  margin: 0.4rem 1rem 0.2rem;
+  padding: 0.3rem 0.5rem;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 4px;
+  color: #e6edf3;
+  font-size: 0.78rem;
+  outline: none;
+}
+.sidebar-player-search:focus { border-color: #58a6ff; }
+
 .sidebar-speech-label { white-space: nowrap; flex-shrink: 0; }
 .sidebar-speech-slider {
   flex: 1;

@@ -59,6 +59,33 @@ function SimpleNavItem({ to, label }: { to: string; label: string }) {
   );
 }
 
+function PlayerSearch() {
+  const [q, setQ] = useState('');
+  const filtered = q.trim()
+    ? PLAYER_REGISTRY.filter(p => p.name.toLowerCase().includes(q.toLowerCase()))
+    : PLAYER_REGISTRY;
+  return (
+    <>
+      <input
+        className="sidebar-player-search"
+        type="search"
+        placeholder="Filter players…"
+        value={q}
+        onChange={e => setQ(e.target.value)}
+        aria-label="Filter players"
+      />
+      <ul role="list" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+        {filtered.map(p => (
+          <SimpleNavItem key={p.id} to={`/players/${p.id}`} label={p.name} />
+        ))}
+        {filtered.length === 0 && (
+          <li style={{ padding: '0.4rem 1rem', opacity: 0.5, fontSize: '0.8rem' }}>No match</li>
+        )}
+      </ul>
+    </>
+  );
+}
+
 export default function Sidebar({ onSignIn }: { onSignIn: () => void }) {
   const displayName  = useAuthStore(s => s.displayName);
   const logout       = useAuthStore(s => s.logout);
@@ -196,11 +223,7 @@ export default function Sidebar({ onSignIn }: { onSignIn: () => void }) {
       {/* ── Classical Games ── */}
       <details className="sidebar-group">
         <summary className="sidebar-group-btn">Classical Games</summary>
-        <ul role="list" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-          {PLAYER_REGISTRY.map(p => (
-            <SimpleNavItem key={p.id} to={`/players/${p.id}`} label={p.name} />
-          ))}
-        </ul>
+        <PlayerSearch />
       </details>
 
       {/* ── Voice speed ── */}
