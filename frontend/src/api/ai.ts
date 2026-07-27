@@ -61,10 +61,12 @@ export async function fetchGeminiEval(
   suggestedMoves: string[],
 ): Promise<string | null> {
   const prompt =
-    `You are a concise chess coach. Game so far: ${pgn}. ` +
-    `Position FEN: ${fen}. ` +
-    `The student suggests: ${suggestedMoves.join(', ')}. ` +
-    `Is this a good move? What is the key idea? Answer in exactly 2 short sentences.`;
+    `You are a chess coach. The student suggests ${suggestedMoves.join(', ')}.\n` +
+    `Position (FEN): ${fen}\n` +
+    `Game so far: ${pgn}\n\n` +
+    `Evaluate concretely: does this move win material, control a key square, or create a specific threat — name the exact square or piece. ` +
+    `If there is a stronger alternative, write it in algebraic notation and say why in one clause. ` +
+    `Never say "good move" or "interesting idea" without naming what specifically it achieves. 2 sentences max.`;
   return callGroq(prompt);
 }
 
@@ -88,10 +90,13 @@ export async function fetchGroqQuestion(
   question: string,
 ): Promise<string | null> {
   const prompt =
-    `You are a chess coach. Game so far: ${pgn}. ` +
-    `Position FEN: ${fen}. ` +
-    `The student asks: ${question}. ` +
-    `Answer concisely in 2-3 sentences.`;
+    `You are a chess coach. The student asks: "${question}"\n` +
+    `Position (FEN): ${fen}\n` +
+    `Game so far: ${pgn}\n\n` +
+    `Answer with concrete details only: name specific squares and pieces (e.g. "the knight on f3"), ` +
+    `state threats by exact square (e.g. "threatens Bxh7+"), and if recommending a move write it in algebraic notation. ` +
+    `Avoid vague phrases like "better position", "active pieces", or "good square" — always say exactly what is won, lost, or controlled and why. ` +
+    `2-3 sentences.`;
   return callGroq(prompt);
 }
 
@@ -101,10 +106,13 @@ export async function fetchGeminiExplain(
   move: string,
 ): Promise<string | null> {
   const prompt =
-    `You are a concise chess coach. Game so far: ${pgn}. ` +
-    `Position FEN: ${fen}. ` +
-    `The move played was ${move}. ` +
-    `Explain the strategic or tactical reason in exactly 2 short sentences.`;
+    `You are a chess coach. The move ${move} was just played.\n` +
+    `Position (FEN): ${fen}\n` +
+    `Game so far: ${pgn}\n\n` +
+    `Explain concretely: which square or piece does this move directly target or vacate, ` +
+    `what specific threat does it create or prevent (name the square), ` +
+    `and what is the opponent's main concern on the next move. ` +
+    `Do not use vague terms — name every piece and square you refer to. 2 sentences.`;
   return callGroq(prompt);
 }
 
