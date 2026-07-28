@@ -72,8 +72,9 @@ interface Commentary {
 
 export default function ClassicalGame({ game }: { game: GameData }) {
   const { fens, arrows: preArrows } = useMemo(() => buildPositions(game.moves), [game]);
-  const [plyIdx,     setPlyIdx]     = useState(0);
-  const [commentary, setCommentary] = useState<Commentary | null>(null);
+  const [plyIdx,        setPlyIdx]       = useState(0);
+  const [commentary,    setCommentary]   = useState<Commentary | null>(null);
+  const [boardExpanded, setBoardExpanded] = useState(true);
 
   const [customQ,        setCustomQ]       = useState('');
   const [boardWidth,     setBoardWidth]    = useState(() => Math.min(480, window.innerWidth - 32));
@@ -182,7 +183,8 @@ export default function ClassicalGame({ game }: { game: GameData }) {
     if (key === 'f' || key === 'F') { e.preventDefault(); handleF(); return; }
     if (key === 'j' || key === 'J') { e.preventDefault(); handleJ(); return; }
     if (key === 'k' || key === 'K' || key === 'a' || key === 'A' || key === ' ') { e.preventDefault(); handleK(); return; }
-    if (key === 'd' || key === 'D' || key === 's' || key === 'S') { e.preventDefault(); questionInputRef.current?.focus(); return; }
+    if (key === 's' || key === 'S') { e.preventDefault(); setBoardExpanded(b => !b); return; }
+    if (key === 'd' || key === 'D') { e.preventDefault(); questionInputRef.current?.focus(); return; }
   };
 
   useEffect(() => {
@@ -214,7 +216,7 @@ export default function ClassicalGame({ game }: { game: GameData }) {
           </div>
 
           <div ref={boardContainerRef} style={{ width: '100%' }}>
-            <CollapsibleBoard>
+            <CollapsibleBoard isExpanded={boardExpanded} onToggle={() => setBoardExpanded(b => !b)}>
               <Chessboard
                 position={currentFen}
                 boardWidth={boardWidth}
@@ -257,12 +259,30 @@ export default function ClassicalGame({ game }: { game: GameData }) {
             {Array.from({ length: Math.ceil(game.moves.length / 2) }, (_, pair) => {
               const wi = pair * 2;
               const bi = pair * 2 + 1;
+              const jumpTo = (idx: number) => {
+                setPlyIdx(idx + 1);
+                setBoardExpanded(true);
+                setCommentary(null);
+                say(spokenMove(game.moves[idx]));
+              };
               return (
                 <div key={pair} className="cg-pgn-pair">
                   <span className="cg-pgn-num">{pair + 1}.</span>
-                  <span className={`cg-pgn-move${wi === plyIdx - 1 ? ' current' : ''}`}>{game.moves[wi]}</span>
+                  <span
+                    className={`cg-pgn-move cg-pgn-move-btn${wi === plyIdx - 1 ? ' current' : ''}`}
+                    onClick={() => jumpTo(wi)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={e => e.key === 'Enter' && jumpTo(wi)}
+                  >{game.moves[wi]}</span>
                   {game.moves[bi] !== undefined && (
-                    <span className={`cg-pgn-move${bi === plyIdx - 1 ? ' current' : ''}`}>{game.moves[bi]}</span>
+                    <span
+                      className={`cg-pgn-move cg-pgn-move-btn${bi === plyIdx - 1 ? ' current' : ''}`}
+                      onClick={() => jumpTo(bi)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={e => e.key === 'Enter' && jumpTo(bi)}
+                    >{game.moves[bi]}</span>
                   )}
                 </div>
               );
@@ -308,7 +328,7 @@ export default function ClassicalGame({ game }: { game: GameData }) {
           </div>
 
           <div className="cg-legend">
-            F = back · J = next · A / Space = commentary · D = ask · R = re-read
+            F = back · J = next · A / Space = commentary · S = board · D = ask · R = re-read
           </div>
         </div>
       </div>
