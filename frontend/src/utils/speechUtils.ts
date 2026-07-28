@@ -10,6 +10,10 @@ export function processText(text: string): string {
 let globalSpeechRate = 10;
 export function setGlobalSpeechRate(rate: number): void { globalSpeechRate = rate; }
 
+export function stopSpeaking(): void {
+  if (typeof window !== 'undefined' && window.speechSynthesis) window.speechSynthesis.cancel();
+}
+
 export function speak(text: string): void {
   if (typeof window === 'undefined' || !window.speechSynthesis) return;
   window.speechSynthesis.cancel();

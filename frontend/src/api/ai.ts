@@ -61,13 +61,12 @@ export async function fetchGeminiEval(
   suggestedMoves: string[],
 ): Promise<string | null> {
   const prompt =
-    `You are a chess coach explaining to a 1200-rated player who knows basic tactics but not deep strategy. ` +
-    `The student suggests ${suggestedMoves.join(', ')}.\n` +
-    `Position (FEN): ${fen}\n` +
-    `Game so far: ${pgn}\n\n` +
-    `Evaluate concretely: does this move win material, control a key square, or create a specific threat — name the exact square or piece. ` +
-    `If there is a stronger alternative, write it in algebraic notation and say why in one clause. ` +
-    `Never say "good move" or "interesting idea" without naming what specifically it achieves. 2 sentences max.`;
+    `Chess coach. Student suggests: ${suggestedMoves.join(', ')}.\n` +
+    `FEN: ${fen}\n` +
+    `Moves so far: ${pgn}\n\n` +
+    `First sentence: say directly what this move accomplishes — which piece or square it targets, defends, or gains. ` +
+    `Name every piece and square. Do not start with "This move" or "That is".\n` +
+    `Second sentence: if this is the best move, say so. If there is a stronger alternative, name it in algebraic notation and say in one clause why it is stronger. 2 sentences max.`;
   return callGroq(prompt);
 }
 
@@ -91,14 +90,14 @@ export async function fetchGroqQuestion(
   question: string,
 ): Promise<string | null> {
   const prompt =
-    `You are a chess coach explaining to a 1200-rated player who knows basic tactics but not deep strategy. ` +
-    `The student asks: "${question}"\n` +
-    `Position (FEN): ${fen}\n` +
-    `Game so far: ${pgn}\n\n` +
-    `Answer with concrete details only: name specific squares and pieces (e.g. "the knight on f3"), ` +
-    `state threats by exact square (e.g. "threatens Bxh7+"), and if recommending a move write it in algebraic notation. ` +
-    `Avoid vague phrases like "better position", "active pieces", or "good square" — always say exactly what is won, lost, or controlled and why. ` +
-    `2-3 sentences.`;
+    `Chess coach answering a student question. Question: "${question}"\n` +
+    `FEN: ${fen}\n` +
+    `Moves so far: ${pgn}\n\n` +
+    `Answer directly — no "Great question" or preamble. Name every piece and square (e.g. "the knight on f3", "the c6 bishop"). ` +
+    `If recommending a move, write it in algebraic notation. ` +
+    `If there is a best continuation, name it. ` +
+    `Never say "better position" or "active pieces" without naming exactly what is won, lost, or controlled. ` +
+    `2-3 sentences, level: knows basic tactics, not deep strategy.`;
   return callGroq(prompt);
 }
 
@@ -108,14 +107,15 @@ export async function fetchGeminiExplain(
   move: string,
 ): Promise<string | null> {
   const prompt =
-    `You are a chess coach explaining to a 1200-rated player who knows basic tactics but not deep strategy. ` +
-    `The move ${move} was just played.\n` +
-    `Position (FEN): ${fen}\n` +
-    `Game so far: ${pgn}\n\n` +
-    `Explain concretely: which square or piece does this move directly target or vacate, ` +
-    `what specific threat does it create or prevent (name the square), ` +
-    `and what is the opponent's main concern on the next move. ` +
-    `Do not use vague terms — name every piece and square you refer to. 2 sentences.`;
+    `Chess commentator. Move played: ${move}.\n` +
+    `FEN: ${fen}\n` +
+    `Moves so far: ${pgn}\n\n` +
+    `First sentence: state the single most immediate purpose of this move — what it attacks, defends, or gains. ` +
+    `Name every piece and square (e.g. "The knight attacks the bishop on c6.", "Protects the c4 pawn from the rook."). ` +
+    `Do NOT start with "This move", "The key idea", or any preamble — begin directly with the subject.\n` +
+    `Second sentence: if this move is the strongest option available, say so briefly. ` +
+    `If there was a stronger move, name it in algebraic notation and say in one clause why it was stronger. ` +
+    `Keep total response to 2 sentences.`;
   return callGroq(prompt);
 }
 

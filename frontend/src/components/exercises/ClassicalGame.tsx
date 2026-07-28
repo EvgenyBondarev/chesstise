@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { Chess } from 'chess.js';
 import type { Square } from 'chess.js';
 import { Chessboard } from 'react-chessboard';
-import { speak } from '../../utils/speechUtils';
+import { speak, stopSpeaking } from '../../utils/speechUtils';
 import { fetchLichessEval, fetchGeminiExplain, fetchGroqIntro, fetchGroqQuestion, formatEval } from '../../api/ai';
 import type { LichessEval } from '../../api/ai';
 import type { ClassicalGame as GameData } from '../../data/classicalGames';
@@ -179,6 +179,7 @@ export default function ClassicalGame({ game }: { game: GameData }) {
     const active = document.activeElement as HTMLElement | null;
     if (active && ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName)) return;
     const { key } = e;
+    if (key === 'Control') { stopSpeaking(); return; }
     if (key === 'r' || key === 'R') { e.preventDefault(); speak(lastSpokenRef.current); return; }
     if (key === 'f' || key === 'F') { e.preventDefault(); handleF(); return; }
     if (key === 'j' || key === 'J') { e.preventDefault(); handleJ(); return; }
@@ -189,8 +190,8 @@ export default function ClassicalGame({ game }: { game: GameData }) {
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => keyHandlerRef.current?.(e);
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
+    document.addEventListener('keydown', handler, { capture: true });
+    return () => document.removeEventListener('keydown', handler, { capture: true });
   }, []);
 
   const arrows: [Square, Square][] = preArrows[plyIdx] ? [preArrows[plyIdx] as [Square, Square]] : [];
