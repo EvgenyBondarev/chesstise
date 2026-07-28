@@ -1724,6 +1724,10 @@ details[open] > .sidebar-group-btn::after { transform: rotate(90deg); }
 .cg-pgn-move.current { color: var(--accent); font-weight: 700; }
 .cg-pgn-move-btn { cursor: pointer; }
 .cg-pgn-move-btn:hover { color: var(--accent); }
+.cg-move-cls { font-size: 0.72em; font-weight: 700; margin-left: 0.1em; }
+.cg-move-inaccuracy { color: #c8a000; }
+.cg-move-mistake    { color: #d06000; }
+.cg-move-blunder    { color: #cc2020; }
 .cg-question { width: 100%; }
 .cg-question-input {
   width: 100%;

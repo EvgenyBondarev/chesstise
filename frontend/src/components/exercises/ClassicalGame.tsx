@@ -33,6 +33,27 @@ function buildPgn(moves: string[]): string {
   ).join(' ');
 }
 
+type MoveClass = 'inaccuracy' | 'mistake' | 'blunder';
+const CLASS_ICON:  Record<MoveClass, string> = { inaccuracy: '?!', mistake: '?', blunder: '??' };
+
+function classifyMove(before: LichessEval, after: LichessEval, moveIndex: number): MoveClass | null {
+  const side = moveIndex % 2 === 0 ? 1 : -1;
+  if (after.mate !== null) {
+    const opponentHasMate = side === 1 ? after.mate < 0 : after.mate > 0;
+    if (opponentHasMate) {
+      const alreadyLost = before.mate !== null && (side === 1 ? before.mate < 0 : before.mate > 0);
+      return alreadyLost ? null : 'blunder';
+    }
+    return null;
+  }
+  if (before.cp === null || after.cp === null || before.mate !== null) return null;
+  const cpLoss = side * (before.cp - after.cp);
+  if (cpLoss >= 300) return 'blunder';
+  if (cpLoss >= 100) return 'mistake';
+  if (cpLoss >= 50)  return 'inaccuracy';
+  return null;
+}
+
 const PIECE_NAMES: Record<string, string> = { R: 'Rook', N: 'Knight', B: 'Bishop', Q: 'Queen', K: 'King' };
 
 function spokenMove(san: string): string {
@@ -72,9 +93,10 @@ interface Commentary {
 
 export default function ClassicalGame({ game }: { game: GameData }) {
   const { fens, arrows: preArrows } = useMemo(() => buildPositions(game.moves), [game]);
-  const [plyIdx,        setPlyIdx]       = useState(0);
-  const [commentary,    setCommentary]   = useState<Commentary | null>(null);
-  const [boardExpanded, setBoardExpanded] = useState(true);
+  const [plyIdx,              setPlyIdx]             = useState(0);
+  const [commentary,          setCommentary]         = useState<Commentary | null>(null);
+  const [boardExpanded,       setBoardExpanded]      = useState(true);
+  const [moveClassifications, setMoveClassifications] = useState<Record<number, MoveClass>>({});
 
   const [customQ,        setCustomQ]       = useState('');
   const [boardWidth,     setBoardWidth]    = useState(() => Math.min(480, window.innerWidth - 32));
@@ -105,12 +127,25 @@ export default function ClassicalGame({ game }: { game: GameData }) {
   useEffect(() => {
     setPlyIdx(0);
     setCommentary(null);
+    setMoveClassifications({});
     say(`${game.white} versus ${game.black}. Press J to advance moves, A or Space for commentary.`);
+    Promise.all(fens.map(fen => fetchLichessEval(fen))).then(evals => {
+      const result: Record<number, MoveClass> = {};
+      for (let i = 0; i < game.moves.length; i++) {
+        const before = evals[i];
+        const after  = evals[i + 1];
+        if (!before || !after) continue;
+        const cls = classifyMove(before, after, i);
+        if (cls) result[i] = cls;
+      }
+      setMoveClassifications(result);
+    }).catch(() => {});
   }, [game]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleJ() {
     if (plyIdx < game.moves.length) {
-      say(spokenMove(game.moves[plyIdx]));
+      const cls = moveClassifications[plyIdx];
+      say(spokenMove(game.moves[plyIdx]) + (cls ? `, ${cls}` : ''));
       setPlyIdx(p => p + 1);
       setCommentary(null);
     } else {
@@ -261,11 +296,14 @@ export default function ClassicalGame({ game }: { game: GameData }) {
               const wi = pair * 2;
               const bi = pair * 2 + 1;
               const jumpTo = (idx: number) => {
+                const cls = moveClassifications[idx];
                 setPlyIdx(idx + 1);
                 setBoardExpanded(true);
                 setCommentary(null);
-                say(spokenMove(game.moves[idx]));
+                say(spokenMove(game.moves[idx]) + (cls ? `, ${cls}` : ''));
               };
+              const wCls = moveClassifications[wi];
+              const bCls = game.moves[bi] !== undefined ? moveClassifications[bi] : undefined;
               return (
                 <div key={pair} className="cg-pgn-pair">
                   <span className="cg-pgn-num">{pair + 1}.</span>
@@ -275,7 +313,9 @@ export default function ClassicalGame({ game }: { game: GameData }) {
                     role="button"
                     tabIndex={0}
                     onKeyDown={e => e.key === 'Enter' && jumpTo(wi)}
-                  >{game.moves[wi]}</span>
+                  >
+                    {game.moves[wi]}{wCls && <span className={`cg-move-cls cg-move-${wCls}`}>{CLASS_ICON[wCls]}</span>}
+                  </span>
                   {game.moves[bi] !== undefined && (
                     <span
                       className={`cg-pgn-move cg-pgn-move-btn${bi === plyIdx - 1 ? ' current' : ''}`}
@@ -283,7 +323,9 @@ export default function ClassicalGame({ game }: { game: GameData }) {
                       role="button"
                       tabIndex={0}
                       onKeyDown={e => e.key === 'Enter' && jumpTo(bi)}
-                    >{game.moves[bi]}</span>
+                    >
+                      {game.moves[bi]}{bCls && <span className={`cg-move-cls cg-move-${bCls}`}>{CLASS_ICON[bCls]}</span>}
+                    </span>
                   )}
                 </div>
               );
