@@ -1,20 +1,26 @@
+import { useState } from 'react';
+
 interface Props {
   children: React.ReactNode;
-  isExpanded: boolean;
-  onToggle: () => void;
+  isExpanded?: boolean;
+  onToggle?: () => void;
 }
 
 export default function CollapsibleBoard({ children, isExpanded, onToggle }: Props) {
+  const [localVisible, setLocalVisible] = useState(true);
+  const visible = isExpanded !== undefined ? isExpanded : localVisible;
+  const toggle  = onToggle ?? (() => setLocalVisible(v => !v));
+
   return (
     <div className="collapsible-board">
       <button
         className="board-toggle-btn"
-        onClick={onToggle}
-        aria-expanded={isExpanded}
+        onClick={toggle}
+        aria-expanded={visible}
       >
-        {isExpanded ? 'Hide board ▲' : 'Show board ▼'}
+        {visible ? 'Hide board ▲' : 'Show board ▼'}
       </button>
-      {isExpanded && <div className="board-wrap">{children}</div>}
+      {visible && <div className="board-wrap">{children}</div>}
     </div>
   );
 }
