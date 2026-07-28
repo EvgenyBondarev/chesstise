@@ -128,9 +128,16 @@ export default function Sidebar({ onSignIn, isOpen }: { onSignIn: () => void; is
       <div className="sidebar-logo" aria-hidden="true">♟ Chesstíse</div>
       <h2 className="sr-only">Chesstíse – Blindfold Chess Trainer</h2>
 
+      {/* ── Classical Games ── */}
+      <details className="sidebar-group" open>
+        <summary className="sidebar-group-btn">Classical Games</summary>
+        <SimpleNavItem to="/cross-search" label="⇄ Cross-player search" />
+        <PlayerSearch />
+      </details>
+
       {/* ── Drills ── */}
       <div className="sidebar-drills-wrapper">
-        <details className="sidebar-group" open>
+        <details className="sidebar-group">
           <summary className="sidebar-group-btn">Drills</summary>
           <ul role="list" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
             {DRILLS.map(d => <NavItem key={d.to} {...d} />)}
@@ -218,13 +225,6 @@ export default function Sidebar({ onSignIn, isOpen }: { onSignIn: () => void; is
         <ul role="list" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
           <SimpleNavItem to="/endgame" label="Endgame Drills" />
         </ul>
-      </details>
-
-      {/* ── Classical Games ── */}
-      <details className="sidebar-group">
-        <summary className="sidebar-group-btn">Classical Games</summary>
-        <SimpleNavItem to="/cross-search" label="⇄ Cross-player search" />
-        <PlayerSearch />
       </details>
 
       {/* ── Voice speed ── */}
