@@ -46,7 +46,7 @@ builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
     p.WithOrigins(
         "http://localhost:5173",
         "https://chesstise.app",
-        "https://evgenybondarev.github.io")
+        "https://yevhen-bondariev.github.io")
      .AllowAnyHeader()
      .AllowAnyMethod()));
 
