@@ -129,17 +129,26 @@ export default function ClassicalGame({ game }: { game: GameData }) {
     setCommentary(null);
     setMoveClassifications({});
     say(`${game.white} versus ${game.black}. Press J to advance moves, A or Space for commentary.`);
-    Promise.all(fens.map(fen => fetchLichessEval(fen))).then(evals => {
-      const result: Record<number, MoveClass> = {};
-      for (let i = 0; i < game.moves.length; i++) {
-        const before = evals[i];
-        const after  = evals[i + 1];
-        if (!before || !after) continue;
-        const cls = classifyMove(before, after, i);
-        if (cls) result[i] = cls;
-      }
-      setMoveClassifications(result);
-    }).catch(() => {});
+    (async () => {
+      try {
+        const evals: (import('../../api/ai').LichessEval | null)[] = [];
+        const BATCH = 6;
+        for (let i = 0; i < fens.length; i += BATCH) {
+          const batch = await Promise.all(fens.slice(i, i + BATCH).map(fen => fetchLichessEval(fen)));
+          evals.push(...batch);
+          if (i + BATCH < fens.length) await new Promise(r => setTimeout(r, 120));
+        }
+        const result: Record<number, MoveClass> = {};
+        for (let i = 0; i < game.moves.length; i++) {
+          const before = evals[i];
+          const after  = evals[i + 1];
+          if (!before || !after) continue;
+          const cls = classifyMove(before, after, i);
+          if (cls) result[i] = cls;
+        }
+        setMoveClassifications(result);
+      } catch { /* Lichess unavailable */ }
+    })();
   }, [game]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleJ() {
