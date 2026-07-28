@@ -36,8 +36,8 @@ function buildPgn(moves: string[]): string {
 const PIECE_NAMES: Record<string, string> = { R: 'Rook', N: 'Knight', B: 'Bishop', Q: 'Queen', K: 'King' };
 
 function spokenMove(san: string): string {
-  if (san === 'O-O-O' || san === '0-0-0') return 'castles queenside';
-  if (san === 'O-O'   || san === '0-0')   return 'castles';
+  if (san === 'O-O-O' || san === '0-0-0') return 'long castling';
+  if (san === 'O-O'   || san === '0-0')   return 'short castling';
   const suffix = san.endsWith('#') ? ' checkmate' : san.endsWith('+') ? ' check' : '';
   const s = san.replace(/[+#]$/, '');
   if (/^[a-h]/.test(s)) {
