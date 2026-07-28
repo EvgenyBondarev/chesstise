@@ -97,6 +97,7 @@ export default function ClassicalGame({ game }: { game: GameData }) {
   const [commentary,          setCommentary]         = useState<Commentary | null>(null);
   const [boardExpanded,       setBoardExpanded]      = useState(true);
   const [moveClassifications, setMoveClassifications] = useState<Record<number, MoveClass>>({});
+  const [positionEvals,       setPositionEvals]      = useState<(LichessEval | null)[]>([]);
 
   const [customQ,        setCustomQ]       = useState('');
   const [boardWidth,     setBoardWidth]    = useState(() => Math.min(480, window.innerWidth - 32));
@@ -128,27 +129,26 @@ export default function ClassicalGame({ game }: { game: GameData }) {
     setPlyIdx(0);
     setCommentary(null);
     setMoveClassifications({});
+    setPositionEvals([]);
     say(`${game.white} versus ${game.black}. Press J to advance moves, A or Space for commentary.`);
+
+    let cancelled = false;
+    const evals: (LichessEval | null)[] = [];
+
     (async () => {
-      try {
-        const evals: (import('../../api/ai').LichessEval | null)[] = [];
-        const BATCH = 6;
-        for (let i = 0; i < fens.length; i += BATCH) {
-          const batch = await Promise.all(fens.slice(i, i + BATCH).map(fen => fetchLichessEval(fen)));
-          evals.push(...batch);
-          if (i + BATCH < fens.length) await new Promise(r => setTimeout(r, 120));
+      for (let i = 0; i < fens.length && !cancelled; i++) {
+        const ev = await fetchLichessEval(fens[i]);
+        evals[i] = ev;
+        setPositionEvals(prev => { const next = [...prev]; next[i] = ev; return next; });
+        if (i > 0 && evals[i - 1] && evals[i]) {
+          const cls = classifyMove(evals[i - 1]!, evals[i]!, i - 1);
+          if (cls) setMoveClassifications(prev => ({ ...prev, [i - 1]: cls }));
         }
-        const result: Record<number, MoveClass> = {};
-        for (let i = 0; i < game.moves.length; i++) {
-          const before = evals[i];
-          const after  = evals[i + 1];
-          if (!before || !after) continue;
-          const cls = classifyMove(before, after, i);
-          if (cls) result[i] = cls;
-        }
-        setMoveClassifications(result);
-      } catch { /* Lichess unavailable */ }
+        if (i < fens.length - 1) await new Promise<void>(r => setTimeout(r, 50));
+      }
     })();
+
+    return () => { cancelled = true; };
   }, [game]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleJ() {
@@ -185,7 +185,10 @@ export default function ClassicalGame({ game }: { game: GameData }) {
       ? fetchGeminiExplain(fen, pgn, lastMove)
       : fetchGroqIntro(game.white, game.black, game.year ?? null, game.event ?? null);
 
-    Promise.all([fetchLichessEval(fen), groqPromise])
+    const cachedEval = positionEvals[plyIdx] !== undefined ? positionEvals[plyIdx] : null;
+    const evalPromise = cachedEval !== null ? Promise.resolve(cachedEval) : fetchLichessEval(fen);
+
+    Promise.all([evalPromise, groqPromise])
       .then(([lichess, gemini]) => {
         setCommentary({ lichess, gemini, loading: false });
         const parts: string[] = [];
