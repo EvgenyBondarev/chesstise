@@ -1170,8 +1170,34 @@ details[open] > .sidebar-group-btn::after { transform: rotate(90deg); }
 .sidebar-speech-slider {
   flex: 1;
   min-width: 0;
-  accent-color: var(--accent);
   cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  height: 2px;
+  background: var(--border);
+  border-radius: 1px;
+  outline: none;
+}
+.sidebar-speech-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+}
+.sidebar-speech-slider::-moz-range-track {
+  height: 2px;
+  background: var(--border);
+  border-radius: 1px;
+}
+.sidebar-speech-slider::-moz-range-thumb {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: none;
 }
 .sidebar-speech-value {
   flex-shrink: 0;
