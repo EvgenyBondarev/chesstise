@@ -22,7 +22,7 @@ export const useProfileStore = create<ProfileState>()(
       cellGuesserRuns: [],
       squareColorRuns: [],
       blindPathingRuns: [],
-      speechRate: 10,
+      speechRate: 2,
       markedGames: [],
 
       addCellGuesserRun: (run) =>
