@@ -225,14 +225,14 @@ export default function ClassicalGame({ game }: { game: GameData }) {
   keyHandlerRef.current = (e: KeyboardEvent) => {
     const active = document.activeElement as HTMLElement | null;
     if (active && ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName)) return;
-    const { key } = e;
-    if (key === 'Control') { stopSpeaking(); return; }
-    if (key === 'r' || key === 'R') { e.preventDefault(); speak(lastSpokenRef.current); return; }
-    if (key === 'f' || key === 'F') { e.preventDefault(); handleF(); return; }
-    if (key === 'j' || key === 'J') { e.preventDefault(); handleJ(); return; }
-    if (key === 'k' || key === 'K' || key === 'a' || key === 'A' || key === ' ') { e.preventDefault(); handleK(); return; }
-    if (key === 's' || key === 'S') { e.preventDefault(); setBoardExpanded(b => !b); return; }
-    if (key === 'd' || key === 'D') { e.preventDefault(); questionInputRef.current?.focus(); return; }
+    const { key, code } = e;
+    if (key === 'Control')        { stopSpeaking(); return; }
+    if (key === 'ArrowLeft')      { e.preventDefault(); handleF(); return; }
+    if (key === 'ArrowRight')     { e.preventDefault(); handleJ(); return; }
+    if (key === 'ArrowDown')      { e.preventDefault(); handleK(); return; }
+    if (key === 'ArrowUp')        { e.preventDefault(); questionInputRef.current?.focus(); return; }
+    if (code === 'Numpad0')       { e.preventDefault(); setBoardExpanded(b => !b); return; }
+    if (code === 'NumpadDecimal') { e.preventDefault(); speak(lastSpokenRef.current); return; }
   };
 
   useEffect(() => {
@@ -349,7 +349,7 @@ export default function ClassicalGame({ game }: { game: GameData }) {
               ref={questionInputRef}
               className="cg-question-input"
               type="text"
-              placeholder="Ask a question about this position… (D to focus, Enter to send)"
+              placeholder="Ask a question about this position… (↑ to focus, Enter to send)"
               value={customQ}
               onChange={e => {
                 const newVal = e.target.value;
@@ -383,7 +383,7 @@ export default function ClassicalGame({ game }: { game: GameData }) {
           </div>
 
           <div className="cg-legend">
-            F = back · J = next · A / Space = commentary · S = board · D = ask · R = re-read
+            ← = back · → = next · ↓ = commentary · ↑ = ask · Ctrl = stop · Calc 0 = board · Calc · = re-read
           </div>
         </div>
       </div>
