@@ -100,7 +100,7 @@ export default function ClassicalGame({ game }: { game: GameData }) {
   const [positionEvals,       setPositionEvals]      = useState<(LichessEval | null)[]>([]);
 
   const [customQ,        setCustomQ]       = useState('');
-  const [boardWidth,     setBoardWidth]    = useState(() => Math.round(Math.min(480, window.innerWidth - 32) * 0.75));
+  const [boardWidth,     setBoardWidth]    = useState(() => Math.min(360, window.innerWidth - 32));
   const lastSpokenRef    = useRef('');
   const prevQRef         = useRef('');
   const keyHandlerRef    = useRef<((e: KeyboardEvent) => void) | null>(null);
@@ -111,7 +111,7 @@ export default function ClassicalGame({ game }: { game: GameData }) {
     const el = boardContainerRef.current;
     if (!el) return;
     const obs = new ResizeObserver(([entry]) => {
-      setBoardWidth(Math.round(Math.min(480, Math.floor(entry.contentRect.width)) * 0.75));
+      setBoardWidth(Math.min(360, Math.floor(entry.contentRect.width)));
     });
     obs.observe(el);
     return () => obs.disconnect();

@@ -16,7 +16,7 @@ import AccessibleBoard from '../common/AccessibleBoard'
 import StatsPanel from '../common/StatsPanel'
 
 const ID = 'cell-guesser' as const
-const BOARD_SIZE = 480
+const BOARD_SIZE = 360
 const ROUND_SIZE = 30
 const DIM = { boxShadow: 'inset 0 0 0 1000px rgba(13,17,23,0.72)' }
 

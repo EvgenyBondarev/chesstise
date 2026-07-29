@@ -7,7 +7,7 @@ import { getOpening, WHITE_START, BLACK_START } from '../../data/openings';
 import type { OpeningMove } from '../../data/openings';
 import { useAnnouncer } from '../../hooks/useAnnouncer';
 
-const BOARD_SIZE = 480;
+const BOARD_SIZE = 360;
 
 const SELECTED_STYLE: React.CSSProperties = { background: 'rgba(88,166,255,0.35)' };
 const ERROR_STYLE:    React.CSSProperties = { background: 'rgba(248,81,73,0.45)'   };

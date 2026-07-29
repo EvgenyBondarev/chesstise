@@ -28,7 +28,7 @@ import { useAnnouncer } from '../../hooks/useAnnouncer';
 import StatsPanel from '../common/StatsPanel';
 
 const ID = 'blind-pathing' as const;
-const BOARD_SIZE = 480;
+const BOARD_SIZE = 360;
 const ROUND_SIZE = 30;
 
 type KnightNotation = 'compass' | 'clock';

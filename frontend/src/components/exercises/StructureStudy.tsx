@@ -3,7 +3,7 @@ import { Chessboard } from 'react-chessboard';
 import { getStructure, STRUCTURES } from '../../data/structures';
 import CollapsibleBoard from '../common/CollapsibleBoard';
 
-const BOARD_SIZE = 480;
+const BOARD_SIZE = 360;
 
 export default function StructureStudy() {
   const { id } = useParams<{ id: string }>();

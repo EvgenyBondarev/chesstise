@@ -465,7 +465,7 @@ button { cursor: pointer; border: none; font-family: inherit; }
   flex-direction: column;
   gap: 1rem;
   width: 100%;
-  max-width: 860px;
+  max-width: 400px;
 }
 
 .exercise-title {
@@ -481,7 +481,7 @@ button { cursor: pointer; border: none; font-family: inherit; }
   align-items: flex-start;
 }
 
-.board-col { display: flex; flex-direction: column; gap: 0.75rem; width: 480px; max-width: 100%; flex-shrink: 1; overflow: hidden; }
+.board-col { display: flex; flex-direction: column; gap: 0.75rem; width: 360px; max-width: 100%; flex-shrink: 1; overflow: hidden; }
 
 /* ── Prompt card ── */
 .prompt-card {
