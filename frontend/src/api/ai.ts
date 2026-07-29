@@ -105,17 +105,17 @@ export async function fetchGeminiExplain(
   fen: string,
   pgn: string,
   move: string,
+  evalHint?: string | null,
 ): Promise<string | null> {
   const prompt =
     `Chess commentator. Move played: ${move}.\n` +
     `FEN: ${fen}\n` +
-    `Moves so far: ${pgn}\n\n` +
-    `First sentence: state the single most immediate purpose of this move — what it attacks, defends, or gains. ` +
-    `Name every piece and square (e.g. "The knight attacks the bishop on c6.", "Protects the c4 pawn from the rook."). ` +
-    `Do NOT start with "This move", "The key idea", or any preamble — begin directly with the subject.\n` +
-    `Second sentence: if this move is the strongest option available, say so briefly. ` +
-    `If there was a stronger move, name it in algebraic notation and say in one clause why it was stronger. ` +
-    `Keep total response to 2 sentences.`;
+    `Recent moves: ${pgn}\n` +
+    (evalHint ? `Engine evaluation before → after: ${evalHint}\n` : '') +
+    `\nIn 1-2 sentences, state what this move concretely does: which piece or square it attacks, defends, or secures. ` +
+    `Name every piece and square. Do NOT start with "This move" or any preamble. ` +
+    `Do NOT claim the move is strong or best unless the evaluation shows it is. ` +
+    `If the evaluation dropped significantly, acknowledge the move was inaccurate and say what was lost.`;
   return callGroq(prompt);
 }
 

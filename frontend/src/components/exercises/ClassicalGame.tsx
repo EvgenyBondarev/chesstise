@@ -178,17 +178,20 @@ export default function ClassicalGame({ game }: { game: GameData }) {
     setCommentary({ lichess: null, gemini: null, loading: true });
 
     const fen      = currentFen;
-    const pgn      = buildPgn(game.moves.slice(0, plyIdx));
+    const pgn      = buildPgn(game.moves.slice(Math.max(0, plyIdx - 15), plyIdx));
     const lastMove = plyIdx > 0 ? game.moves[plyIdx - 1] : null;
 
+    const evBefore = plyIdx > 0 ? (positionEvals[plyIdx - 1] ?? null) : null;
+    const evAfter  = positionEvals[plyIdx] ?? null;
+    const evalHint = (evBefore && evAfter)
+      ? `${formatEval(evBefore)} → ${formatEval(evAfter)}`
+      : null;
+
     const groqPromise = lastMove
-      ? fetchGeminiExplain(fen, pgn, lastMove)
+      ? fetchGeminiExplain(fen, pgn, lastMove, evalHint)
       : fetchGroqIntro(game.white, game.black, game.year ?? null, game.event ?? null);
 
-    const cachedEval = positionEvals[plyIdx] !== undefined ? positionEvals[plyIdx] : null;
-    const evalPromise = cachedEval !== null ? Promise.resolve(cachedEval) : fetchLichessEval(fen);
-
-    Promise.all([evalPromise, groqPromise])
+    Promise.all([fetchLichessEval(fen), groqPromise])
       .then(([lichess, gemini]) => {
         setCommentary({ lichess, gemini, loading: false });
         const parts: string[] = [];
@@ -209,7 +212,7 @@ export default function ClassicalGame({ game }: { game: GameData }) {
     questionInputRef.current?.blur();
     setCommentary({ lichess: null, gemini: null, loading: true });
     const fen = currentFen;
-    const pgn = buildPgn(game.moves.slice(0, plyIdx));
+    const pgn = buildPgn(game.moves.slice(Math.max(0, plyIdx - 15), plyIdx));
     fetchGroqQuestion(fen, pgn, q)
       .then(gemini => {
         setCommentary({ lichess: null, gemini, loading: false });
@@ -272,6 +275,8 @@ export default function ClassicalGame({ game }: { game: GameData }) {
                 customArrows={arrows}
                 animationDuration={200}
                 showBoardNotation={false}
+                customDarkSquareStyle={{ backgroundColor: '#3d5a6e' }}
+                customLightSquareStyle={{ backgroundColor: '#7a96a8' }}
               />
             </CollapsibleBoard>
           </div>
