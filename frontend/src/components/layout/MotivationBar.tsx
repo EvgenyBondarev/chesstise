@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useMotivationStore } from '../../store/motivationStore';
-import { playAlertSound } from '../../utils/speechUtils';
+import { playAlertSound, playCongratsSound } from '../../utils/speechUtils';
 import {
   getDateKey, expectedHours, freeUntil, formatClock, formatHM, formatStopwatch, windowFraction,
   WINDOW_START_HOUR, WINDOW_END_HOUR,
@@ -88,6 +88,7 @@ export default function MotivationBar() {
   const [manualH, setManualH] = useState(0);
   const [manualM, setManualM] = useState(0);
   const lastAlertRef = useRef(0);
+  const goalMetRef   = useRef(false);
   const manualRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -143,9 +144,20 @@ export default function MotivationBar() {
   const isLate    = hasGoal && actualHours < expected;
   const freeUntilTime = hasGoal ? freeUntil(actualHours, goalHours, now) : null;
 
+  // Play triumph sound the first time the daily goal is reached this session.
+  useEffect(() => {
+    if (!hasGoal) { goalMetRef.current = false; return; }
+    const met = actualHours >= goalHours;
+    if (met && !goalMetRef.current) {
+      goalMetRef.current = true;
+      playCongratsSound();
+    }
+    if (!met) goalMetRef.current = false;
+  }, [actualHours, goalHours, hasGoal]);
+
   // Fire the audio + pop-up signal when behind schedule, throttled so it doesn't nag constantly.
   useEffect(() => {
-    if (!isLate) return;
+    if (!isLate || running) return;
     const sinceLast = Date.now() - lastAlertRef.current;
     if (sinceLast < ALERT_COOLDOWN_MS) return;
     lastAlertRef.current = Date.now();
@@ -158,7 +170,7 @@ export default function MotivationBar() {
         });
       } catch { /* Notification unavailable */ }
     }
-  }, [isLate, goalHours, now]);
+  }, [isLate, running, goalHours, now]);
 
   const handleToggle = () => {
     if (running) {
