@@ -173,7 +173,7 @@ button { cursor: pointer; border: none; font-family: inherit; }
 }
 
 .motivation-goal-input {
-  width: 2.4rem;
+  width: 2.9rem;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 4px;
@@ -183,6 +183,58 @@ button { cursor: pointer; border: none; font-family: inherit; }
   outline: none;
 }
 .motivation-goal-input:focus { border-color: var(--accent); }
+
+/* ── Custom number-field spin buttons (native ones ignore dark theming) ── */
+.num-field { position: relative; display: inline-flex; }
+
+.num-field-input {
+  padding-right: 1rem;
+  -moz-appearance: textfield;
+}
+.num-field-input::-webkit-outer-spin-button,
+.num-field-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.num-field-spin {
+  position: absolute;
+  right: 2px;
+  top: 2px;
+  bottom: 2px;
+  width: 0.8rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.num-field-spin-btn {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  border-radius: 2px;
+  color: var(--muted);
+}
+.num-field-spin-btn:hover { color: var(--accent); background: rgba(255, 255, 255, 0.08); }
+
+.num-field-arrow-up {
+  width: 0;
+  height: 0;
+  border-left: 3px solid transparent;
+  border-right: 3px solid transparent;
+  border-bottom: 3px solid currentColor;
+}
+.num-field-arrow-down {
+  width: 0;
+  height: 0;
+  border-left: 3px solid transparent;
+  border-right: 3px solid transparent;
+  border-top: 3px solid currentColor;
+}
 
 .motivation-playstop {
   width: 1.9rem;
@@ -259,7 +311,7 @@ button { cursor: pointer; border: none; font-family: inherit; }
   color: var(--muted);
 }
 .motivation-manual-row input {
-  width: 2.4rem;
+  width: 2.9rem;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 4px;
@@ -299,6 +351,14 @@ button { cursor: pointer; border: none; font-family: inherit; }
   padding: 0.1rem 0.3rem;
 }
 .motivation-manual-clear:hover { text-decoration: underline; }
+
+.motivation-session-clock {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--red);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 
 .motivation-total {
   font-size: 0.78rem;

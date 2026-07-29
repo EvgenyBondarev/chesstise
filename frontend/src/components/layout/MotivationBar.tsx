@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useMotivationStore } from '../../store/motivationStore';
 import { playAlertSound } from '../../utils/speechUtils';
 import {
-  getDateKey, expectedHours, freeUntil, formatClock, formatHM, windowFraction,
+  getDateKey, expectedHours, freeUntil, formatClock, formatHM, formatStopwatch, windowFraction,
   WINDOW_START_HOUR, WINDOW_END_HOUR,
 } from '../../utils/motivation';
 
@@ -13,6 +13,62 @@ const LABEL_HOURS = [8, 12, 16, 20, 24];
 
 function hourPct(h: number): number {
   return ((h - WINDOW_START_HOUR) / (WINDOW_END_HOUR - WINDOW_START_HOUR)) * 100;
+}
+
+interface NumFieldProps {
+  value: number;
+  onChange: (v: number) => void;
+  min?: number;
+  max?: number;
+  step?: number;
+  ariaLabel: string;
+  placeholder?: string;
+  className?: string;
+}
+
+// A number input with custom, dark-theme spin buttons (the native ones ignore page theming).
+function NumField({ value, onChange, min = 0, max, step = 1, ariaLabel, placeholder, className }: NumFieldProps) {
+  const clamp = (v: number) => {
+    let r = v;
+    if (min !== undefined) r = Math.max(min, r);
+    if (max !== undefined) r = Math.min(max, r);
+    return r;
+  };
+  return (
+    <span className="num-field">
+      <input
+        type="number"
+        className={`num-field-input${className ? ` ${className}` : ''}`}
+        min={min}
+        max={max}
+        step={step}
+        placeholder={placeholder}
+        value={value || ''}
+        onChange={e => onChange(clamp(Number(e.target.value) || 0))}
+        aria-label={ariaLabel}
+      />
+      <span className="num-field-spin">
+        <button
+          type="button"
+          tabIndex={-1}
+          className="num-field-spin-btn"
+          aria-label={`Increase ${ariaLabel}`}
+          onClick={() => onChange(clamp(value + step))}
+        >
+          <span className="num-field-arrow-up" />
+        </button>
+        <button
+          type="button"
+          tabIndex={-1}
+          className="num-field-spin-btn"
+          aria-label={`Decrease ${ariaLabel}`}
+          onClick={() => onChange(clamp(value - step))}
+        >
+          <span className="num-field-arrow-down" />
+        </button>
+      </span>
+    </span>
+  );
 }
 
 export default function MotivationBar() {
@@ -131,27 +187,23 @@ export default function MotivationBar() {
       <div className="motivation-controls">
         <label className="motivation-goal-label">
           Goal
-          <input
-            type="number"
+          <NumField
             className="motivation-goal-input"
-            min={0}
+            value={goalH}
+            onChange={h => updateGoal(h, goalM)}
             step={1}
             placeholder="0"
-            value={goalH || ''}
-            onChange={e => updateGoal(Number(e.target.value) || 0, goalM)}
-            aria-label="Goal hours for today"
+            ariaLabel="Goal hours for today"
           />
           h
-          <input
-            type="number"
+          <NumField
             className="motivation-goal-input"
-            min={0}
+            value={goalM}
+            onChange={m => updateGoal(goalH, m)}
             max={59}
             step={5}
             placeholder="0"
-            value={goalM || ''}
-            onChange={e => updateGoal(goalH, Number(e.target.value) || 0)}
-            aria-label="Goal minutes for today"
+            ariaLabel="Goal minutes for today"
           />
           m
         </label>
@@ -165,6 +217,12 @@ export default function MotivationBar() {
             ? <span className="motivation-stop-icon" aria-hidden="true" />
             : <span className="motivation-play-icon" aria-hidden="true" />}
         </button>
+
+        {running && (
+          <span className="motivation-session-clock" aria-live="off">
+            {formatStopwatch(runningMsToday)}
+          </span>
+        )}
 
         <span className="motivation-total" aria-live="off">
           {formatHM(actualMs)}{hasGoal ? ` / ${formatHM(goalHours * 3_600_000)}` : ''}
@@ -183,25 +241,21 @@ export default function MotivationBar() {
           {showManual && (
             <div className="motivation-manual-popover" role="dialog" aria-label="Add time manually">
               <div className="motivation-manual-row">
-                <input
-                  type="number"
-                  min={0}
+                <NumField
+                  value={manualH}
+                  onChange={setManualH}
                   step={1}
                   placeholder="0"
-                  value={manualH || ''}
-                  onChange={e => setManualH(Number(e.target.value) || 0)}
-                  aria-label="Hours to add"
+                  ariaLabel="Hours to add"
                 />
                 h
-                <input
-                  type="number"
-                  min={0}
+                <NumField
+                  value={manualM}
+                  onChange={setManualM}
                   max={59}
                   step={5}
                   placeholder="0"
-                  value={manualM || ''}
-                  onChange={e => setManualM(Number(e.target.value) || 0)}
-                  aria-label="Minutes to add"
+                  ariaLabel="Minutes to add"
                 />
                 m
                 <button className="motivation-manual-add" onClick={handleAddManual}>Add</button>
