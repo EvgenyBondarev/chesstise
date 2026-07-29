@@ -4,35 +4,82 @@ import { useMotivationStore } from '../../store/motivationStore';
 import { playAlertSound } from '../../utils/speechUtils';
 import {
   getDateKey, expectedHours, freeUntil, formatClock, formatHM, windowFraction,
+  WINDOW_START_HOUR, WINDOW_END_HOUR,
 } from '../../utils/motivation';
 
 const ALERT_COOLDOWN_MS = 10 * 60 * 1000; // don't re-nag more than once per 10 min
+const TICK_HOURS  = [8, 10, 12, 14, 16, 18, 20, 22, 24];
+const LABEL_HOURS = [8, 12, 16, 20, 24];
+
+function hourPct(h: number): number {
+  return ((h - WINDOW_START_HOUR) / (WINDOW_END_HOUR - WINDOW_START_HOUR)) * 100;
+}
 
 export default function MotivationBar() {
   const goalHoursByDate = useMotivationStore(s => s.goalHoursByDate);
-  const sessions         = useMotivationStore(s => s.sessions);
-  const running           = useMotivationStore(s => s.running);
-  const setGoalHours      = useMotivationStore(s => s.setGoalHours);
-  const start             = useMotivationStore(s => s.start);
-  const stop               = useMotivationStore(s => s.stop);
+  const manualMsByDate  = useMotivationStore(s => s.manualMsByDate);
+  const sessions        = useMotivationStore(s => s.sessions);
+  const running         = useMotivationStore(s => s.running);
+  const setGoalHours    = useMotivationStore(s => s.setGoalHours);
+  const addManualMs     = useMotivationStore(s => s.addManualMs);
+  const clearManualMs   = useMotivationStore(s => s.clearManualMs);
+  const start           = useMotivationStore(s => s.start);
+  const stop            = useMotivationStore(s => s.stop);
 
   const [now, setNow] = useState(() => new Date());
   const [showLateModal, setShowLateModal] = useState(false);
+  const [showManual, setShowManual] = useState(false);
+  const [manualH, setManualH] = useState(0);
+  const [manualM, setManualM] = useState(0);
   const lastAlertRef = useRef(0);
+  const manualRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
 
-  const todayKey   = getDateKey(now);
-  const goalHours  = goalHoursByDate[todayKey] ?? 0;
+  // Close the manual-add popover on outside click / Escape
+  useEffect(() => {
+    if (!showManual) return;
+    const onClick = (e: MouseEvent) => {
+      if (manualRef.current && !manualRef.current.contains(e.target as Node)) setShowManual(false);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowManual(false); };
+    document.addEventListener('mousedown', onClick);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onClick);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [showManual]);
 
+  const todayKey = getDateKey(now);
+
+  // Carry the most recently set goal forward onto a fresh day so the field isn't blank each morning.
+  useEffect(() => {
+    if (goalHoursByDate[todayKey] !== undefined) return;
+    const priorDates = Object.keys(goalHoursByDate).filter(d => d < todayKey).sort();
+    const lastGoal = priorDates.length ? goalHoursByDate[priorDates[priorDates.length - 1]] : 0;
+    if (lastGoal > 0) setGoalHours(todayKey, lastGoal);
+  }, [todayKey, goalHoursByDate, setGoalHours]);
+
+  const goalHours = goalHoursByDate[todayKey] ?? 0;
+  const goalTotalMin = Math.round(goalHours * 60);
+  const goalH = Math.floor(goalTotalMin / 60);
+  const goalM = goalTotalMin % 60;
+
+  const updateGoal = (h: number, m: number) => {
+    const hours = Math.max(0, h) + Math.max(0, Math.min(59, m)) / 60;
+    setGoalHours(todayKey, hours);
+  };
+
+  const manualMsToday = manualMsByDate[todayKey] ?? 0;
   const completedMsToday = sessions
     .filter(s => s.date === todayKey)
     .reduce((sum, s) => sum + (s.endMs - s.startMs), 0);
   const runningMsToday = running ? Math.max(0, now.getTime() - running.startedAt) : 0;
-  const actualMs    = completedMsToday + runningMsToday;
+  const actualMs    = completedMsToday + runningMsToday + manualMsToday;
   const actualHours = actualMs / 3_600_000;
 
   const hasGoal   = goalHours > 0;
@@ -51,7 +98,7 @@ export default function MotivationBar() {
     if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
       try {
         new Notification('Chesstíse — behind schedule', {
-          body: `You're behind your ${goalHours}h chess goal for today.`,
+          body: `You're behind your ${formatHM(goalHours * 3_600_000)} chess goal for today.`,
         });
       } catch { /* Notification unavailable */ }
     }
@@ -68,25 +115,45 @@ export default function MotivationBar() {
     start();
   };
 
-  const nowFraction = windowFraction(now);
+  const handleAddManual = () => {
+    const ms = (Math.max(0, manualH) * 60 + Math.max(0, Math.min(59, manualM))) * 60_000;
+    if (ms > 0) addManualMs(todayKey, ms);
+    setManualH(0);
+    setManualM(0);
+    setShowManual(false);
+  };
+
+  const nowFraction  = windowFraction(now);
   const fillFraction = hasGoal ? Math.min(1, actualHours / goalHours) : 0;
 
   return (
     <div className="motivation-bar">
       <div className="motivation-controls">
         <label className="motivation-goal-label">
-          Today's goal
+          Goal
           <input
             type="number"
             className="motivation-goal-input"
             min={0}
-            step={0.5}
-            placeholder="hrs"
-            value={goalHours || ''}
-            onChange={e => setGoalHours(todayKey, Math.max(0, Number(e.target.value) || 0))}
-            aria-label="Planned chess work hours for today"
+            step={1}
+            placeholder="0"
+            value={goalH || ''}
+            onChange={e => updateGoal(Number(e.target.value) || 0, goalM)}
+            aria-label="Goal hours for today"
           />
           h
+          <input
+            type="number"
+            className="motivation-goal-input"
+            min={0}
+            max={59}
+            step={5}
+            placeholder="0"
+            value={goalM || ''}
+            onChange={e => updateGoal(goalH, Number(e.target.value) || 0)}
+            aria-label="Goal minutes for today"
+          />
+          m
         </label>
 
         <button
@@ -94,12 +161,60 @@ export default function MotivationBar() {
           onClick={handleToggle}
           aria-label={running ? 'Stop work session' : 'Start work session'}
         >
-          {running ? '■' : '▶'}
+          {running
+            ? <span className="motivation-stop-icon" aria-hidden="true" />
+            : <span className="motivation-play-icon" aria-hidden="true" />}
         </button>
 
         <span className="motivation-total" aria-live="off">
-          {formatHM(actualMs)}{hasGoal ? ` / ${goalHours}h` : ''}
+          {formatHM(actualMs)}{hasGoal ? ` / ${formatHM(goalHours * 3_600_000)}` : ''}
         </span>
+
+        <div className="motivation-manual-wrap" ref={manualRef}>
+          <button
+            className="motivation-manual-btn"
+            onClick={() => setShowManual(o => !o)}
+            aria-label="Manually add worked time"
+            aria-expanded={showManual}
+            title="Forgot to hit play? Add time manually"
+          >
+            ✎
+          </button>
+          {showManual && (
+            <div className="motivation-manual-popover" role="dialog" aria-label="Add time manually">
+              <div className="motivation-manual-row">
+                <input
+                  type="number"
+                  min={0}
+                  step={1}
+                  placeholder="0"
+                  value={manualH || ''}
+                  onChange={e => setManualH(Number(e.target.value) || 0)}
+                  aria-label="Hours to add"
+                />
+                h
+                <input
+                  type="number"
+                  min={0}
+                  max={59}
+                  step={5}
+                  placeholder="0"
+                  value={manualM || ''}
+                  onChange={e => setManualM(Number(e.target.value) || 0)}
+                  aria-label="Minutes to add"
+                />
+                m
+                <button className="motivation-manual-add" onClick={handleAddManual}>Add</button>
+              </div>
+              {manualMsToday > 0 && (
+                <div className="motivation-manual-existing">
+                  <span>Added manually today: {formatHM(manualMsToday)}</span>
+                  <button className="motivation-manual-clear" onClick={() => clearManualMs(todayKey)}>Clear</button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="motivation-timeline-wrap">
@@ -108,11 +223,24 @@ export default function MotivationBar() {
             {hasGoal && (
               <div className="motivation-timeline-fill" style={{ width: `${fillFraction * 100}%` }} />
             )}
+            {TICK_HOURS.map(h => (
+              <div key={h} className="motivation-timeline-tick" style={{ left: `${hourPct(h)}%` }} />
+            ))}
             <div className="motivation-timeline-now" style={{ left: `${nowFraction * 100}%` }} />
           </div>
           <div className="motivation-timeline-labels">
-            <span>8:00</span>
-            <span>24:00</span>
+            {LABEL_HOURS.map(h => (
+              <span
+                key={h}
+                className="motivation-timeline-label"
+                style={{
+                  left: `${hourPct(h)}%`,
+                  transform: h === WINDOW_START_HOUR ? 'translateX(0)' : h === WINDOW_END_HOUR ? 'translateX(-100%)' : 'translateX(-50%)',
+                }}
+              >
+                {h}:00
+              </span>
+            ))}
           </div>
         </div>
 
@@ -135,7 +263,7 @@ export default function MotivationBar() {
               <button className="modal-close-btn" onClick={() => setShowLateModal(false)} aria-label="Close">×</button>
             </div>
             <p className="motivation-alert-body">
-              You've done {formatHM(actualMs)} of your {goalHours}h goal today. Time to sit down and play.
+              You've done {formatHM(actualMs)} of your {formatHM(goalHours * 3_600_000)} goal today. Time to sit down and play.
             </p>
           </div>
         </div>,
