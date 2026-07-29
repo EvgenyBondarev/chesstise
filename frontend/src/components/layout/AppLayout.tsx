@@ -2,6 +2,7 @@ import { useState, useEffect, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import AuthModal from '../auth/AuthModal';
+import MotivationBar from './MotivationBar';
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const [authOpen,    setAuthOpen]    = useState(false);
@@ -14,6 +15,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   return (
     <>
       <a href="#main-content" className="skip-link">Skip to exercise</a>
+
+      <MotivationBar />
 
       <div className="app-layout">
         <button

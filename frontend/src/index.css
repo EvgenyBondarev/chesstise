@@ -70,12 +70,12 @@ body {
   overflow: hidden;
 }
 
-#root { height: 100vh; display: flex; }
+#root { height: 100vh; display: flex; flex-direction: column; }
 
 button { cursor: pointer; border: none; font-family: inherit; }
 
 /* ── Layout ── */
-.app-layout { display: flex; width: 100%; height: 100vh; }
+.app-layout { display: flex; width: 100%; flex: 1; min-height: 0; }
 
 .sidebar {
   width: 224px;
@@ -142,6 +142,146 @@ button { cursor: pointer; border: none; font-family: inherit; }
   align-items: center;
   justify-content: flex-start;
   padding: 2rem;
+}
+
+/* ── Motivation bar ── */
+.motivation-bar {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-shrink: 0;
+  width: 100%;
+  padding: 0.5rem 1.25rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.motivation-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+
+.motivation-goal-label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.motivation-goal-input {
+  width: 3.2rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 0.8rem;
+  padding: 0.2rem 0.35rem;
+  outline: none;
+}
+.motivation-goal-input:focus { border-color: var(--accent); }
+
+.motivation-playstop {
+  width: 1.9rem;
+  height: 1.9rem;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--green);
+  color: #06240f;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s;
+}
+.motivation-playstop.running { background: var(--red); color: #2b0906; }
+.motivation-playstop:hover { filter: brightness(1.1); }
+
+.motivation-total {
+  font-size: 0.78rem;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.motivation-timeline-wrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.motivation-timeline {
+  flex: 1;
+  min-width: 8rem;
+  max-width: 26rem;
+}
+
+.motivation-timeline-track {
+  position: relative;
+  height: 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  overflow: visible;
+}
+
+.motivation-timeline-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  height: 100%;
+  background: var(--green);
+  border-radius: 3px 0 0 3px;
+  transition: width .3s ease;
+}
+.motivation-timeline.late .motivation-timeline-fill { background: var(--yellow); }
+
+.motivation-timeline-now {
+  position: absolute;
+  top: -3px;
+  width: 2px;
+  height: 12px;
+  background: var(--text);
+  transform: translateX(-1px);
+}
+.motivation-timeline.late .motivation-timeline-now { background: var(--red); }
+
+.motivation-timeline-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.62rem;
+  color: var(--muted);
+  margin-top: 0.15rem;
+}
+
+.motivation-status {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.motivation-status.late { color: var(--red); font-weight: 600; }
+
+.motivation-alert-panel { border-color: var(--red); }
+.motivation-alert-body {
+  padding: 1rem;
+  font-size: 0.85rem;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+@media (max-width: 640px) {
+  .motivation-bar {
+    flex-wrap: wrap;
+    padding: 0.5rem 0.75rem;
+    padding-left: 3rem;
+  }
+  .motivation-timeline-wrap { order: 1; width: 100%; }
+  .motivation-status { display: none; }
 }
 
 /* ── Exercise shell ── */

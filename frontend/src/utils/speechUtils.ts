@@ -45,6 +45,31 @@ export function playCongratsSound(): void {
   } catch { /* AudioContext unavailable */ }
 }
 
+// Three urgent beeps — used when you've fallen behind your chess practice schedule.
+export function playAlertSound(): void {
+  try {
+    const ctx = new AudioContext();
+    const t   = ctx.currentTime;
+    const beep = (start: number) => {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(880, start);
+      gain.gain.setValueAtTime(0, start);
+      gain.gain.linearRampToValueAtTime(0.3, start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + 0.25);
+      osc.start(start);
+      osc.stop(start + 0.25);
+    };
+    beep(t);
+    beep(t + 0.35);
+    beep(t + 0.7);
+    setTimeout(() => { try { ctx.close(); } catch { /* noop */ } }, 1100);
+  } catch { /* AudioContext unavailable */ }
+}
+
 export function playSound(correct: boolean): void {
   try {
     const ctx = new AudioContext();
