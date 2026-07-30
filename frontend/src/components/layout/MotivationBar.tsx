@@ -9,7 +9,6 @@ import {
   WINDOW_START_HOUR, WINDOW_END_HOUR,
 } from '../../utils/motivation';
 
-const ALERT_COOLDOWN_MS = 10 * 60 * 1000;
 const TICK_HOURS  = [8, 10, 12, 14, 16, 18, 20, 22, 24];
 const LABEL_HOURS = [8, 12, 16, 20, 24];
 const GOAL_TYPES: GoalType[] = ['chess', 'zazen'];
@@ -74,14 +73,14 @@ export default function MotivationBar() {
   const start                 = useMotivationStore(s => s.start);
   const stop                  = useMotivationStore(s => s.stop);
 
-  const [now, setNow]             = useState(() => new Date());
-  const [lateGoal, setLateGoal]   = useState<GoalType | null>(null);
+  const [now, setNow]               = useState(() => new Date());
+  const [lateGoals, setLateGoals]   = useState<GoalType[]>([]);
   const [showManual, setShowManual] = useState(false);
-  const [manualH, setManualH]     = useState(0);
-  const [manualM, setManualM]     = useState(0);
+  const [manualH, setManualH]       = useState(0);
+  const [manualM, setManualM]       = useState(0);
 
-  const lastAlertRef = useRef<Record<GoalType, number>>({ chess: 0, zazen: 0 });
-  const goalMetRef   = useRef<Record<GoalType, boolean>>({ chess: false, zazen: false });
+  const lastAlertHourRef = useRef(new Date().getHours()); // fire only at hour boundaries
+  const goalMetRef       = useRef<Record<GoalType, boolean>>({ chess: false, zazen: false });
   const manualRef    = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -106,13 +105,13 @@ export default function MotivationBar() {
 
   // Close late modal on Enter or Escape
   useEffect(() => {
-    if (!lateGoal) return;
+    if (lateGoals.length === 0) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); setLateGoal(null); }
+      if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); setLateGoals([]); }
     };
     document.addEventListener('keydown', onKey, { capture: true });
     return () => document.removeEventListener('keydown', onKey, { capture: true });
-  }, [lateGoal]);
+  }, [lateGoals]);
 
   const todayKey = getDateKey(now);
 
@@ -172,25 +171,26 @@ export default function MotivationBar() {
     }
   }, [goalData]);
 
-  // Late alerts — suppressed while that goal's session is running
+  // Late alerts — fire once per hour boundary, aggregate all late goals into one popup
   useEffect(() => {
-    for (const { type, isLate: late, goalHours: gh, actualMs: ams } of goalData) {
-      if (!late || running?.type === type) continue;
-      const sinceLast = Date.now() - lastAlertRef.current[type];
-      if (sinceLast < ALERT_COOLDOWN_MS) continue;
-      lastAlertRef.current[type] = Date.now();
-      playAlertSound();
-      setLateGoal(type);
-      if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-        try {
-          new Notification(`Chesstíse — behind on ${GOAL_LABELS[type]}`, {
-            body: `You've done ${formatHM(ams)} of your ${formatHM(gh * 3_600_000)} ${GOAL_LABELS[type]} goal today.`,
-          });
-        } catch { /* Notification unavailable */ }
-      }
-      break; // one alert at a time
+    const currentHour = now.getHours();
+    if (currentHour === lastAlertHourRef.current) return;
+    lastAlertHourRef.current = currentHour;
+
+    const late = goalData.filter(d => d.isLate && running?.type !== d.type);
+    if (late.length === 0) return;
+
+    playAlertSound();
+    setLateGoals(late.map(d => d.type));
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      try {
+        const body = late
+          .map(d => `${GOAL_LABELS[d.type]}: ${formatHM(d.actualMs)} / ${formatHM(d.goalHours * 3_600_000)}`)
+          .join(' · ');
+        new Notification('Chesstíse — behind schedule', { body });
+      } catch { /* Notification unavailable */ }
     }
-  }, [goalData, running]);
+  }, [goalData, now, running]);
 
   const handleToggle = () => {
     if (running) { stop(); return; }
@@ -210,8 +210,6 @@ export default function MotivationBar() {
 
   const nowFraction  = windowFraction(now);
   const fillFraction = hasGoal ? Math.min(1, actualHours / goalHours) : 0;
-
-  const lateGoalData = lateGoal ? goalData.find(d => d.type === lateGoal) : null;
 
   return (
     <div className="motivation-bar">
@@ -338,25 +336,32 @@ export default function MotivationBar() {
         </span>
       </div>
 
-      {lateGoal && lateGoalData && createPortal(
-        <div className="modal-backdrop" onClick={() => setLateGoal(null)}>
+      {lateGoals.length > 0 && createPortal(
+        <div className="modal-backdrop" onClick={() => setLateGoals([])}>
           <div
             className="modal-panel motivation-alert-panel"
             role="alertdialog"
             aria-modal="true"
-            aria-label={`Behind on ${GOAL_LABELS[lateGoal]}`}
+            aria-label="Behind schedule"
             onClick={e => e.stopPropagation()}
           >
             <div className="modal-header">
-              <span className="modal-title">⏰ Behind schedule — {GOAL_LABELS[lateGoal]}</span>
-              <button className="modal-close-btn" onClick={() => setLateGoal(null)} aria-label="Close">×</button>
+              <span className="modal-title">⏰ Behind schedule</span>
+              <button className="modal-close-btn" onClick={() => setLateGoals([])} aria-label="Close">×</button>
             </div>
-            <p className="motivation-alert-body">
-              You've done {formatHM(lateGoalData.actualMs)} of your {formatHM(lateGoalData.goalHours * 3_600_000)} {GOAL_LABELS[lateGoal]} goal today.
-              Time to sit down and {GOAL_ACTION[lateGoal]}.
-            </p>
+            <div className="motivation-alert-body">
+              {lateGoals.map(type => {
+                const d = goalData.find(x => x.type === type)!;
+                return (
+                  <p key={type} style={{ margin: '0 0 0.5rem' }}>
+                    <strong>{GOAL_LABELS[type]}</strong>: {formatHM(d.actualMs)} of {formatHM(d.goalHours * 3_600_000)} done.
+                    Time to {GOAL_ACTION[type]}.
+                  </p>
+                );
+              })}
+            </div>
             <div style={{ textAlign: 'right', padding: '0 1rem 0.75rem' }}>
-              <button className="motivation-manual-add" onClick={() => setLateGoal(null)}>OK (Enter)</button>
+              <button className="motivation-manual-add" onClick={() => setLateGoals([])}>OK (Enter)</button>
             </div>
           </div>
         </div>,
