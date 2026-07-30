@@ -384,7 +384,7 @@ export default function ClassicalGame({ game }: { game: GameData }) {
           </div>
 
           <div className="cg-legend">
-            ← = back · → = next · ↓ = commentary · ↑ = ask · Ctrl = stop · Calc 0 = board · Calc · = re-read
+            ← = back | → = next | ↓ = commentary | ↑ = ask | Ctrl = stop | Calc 0 = board | Calc · = re-read
           </div>
         </div>
       </div>
