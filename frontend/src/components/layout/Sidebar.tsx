@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { useEffect, useState } from 'react';
 import { WHITE_OPENINGS, BLACK_OPENINGS } from '../../data/openings';
+import { TRAINER_WHITE, TRAINER_BLACK } from '../../data/openingTrainers';
 import { STRUCTURES } from '../../data/structures';
 import { PLAYER_REGISTRY } from '../../data/playerRegistry';
 import { useAuthStore } from '../../store/authStore';
@@ -180,6 +181,18 @@ export default function Sidebar({ onSignIn, isOpen }: { onSignIn: () => void; is
       {/* ── Openings ── */}
       <details className="sidebar-group">
         <summary className="sidebar-group-btn">Openings</summary>
+        <div className="sidebar-sub-label" aria-hidden="true">Interactive — White</div>
+        <ul role="list" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+          {TRAINER_WHITE.map(o => (
+            <SimpleNavItem key={o.id} to={`/opening-trainer/${o.id}`} label={o.name} />
+          ))}
+        </ul>
+        <div className="sidebar-sub-label" aria-hidden="true">Interactive — Black</div>
+        <ul role="list" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+          {TRAINER_BLACK.map(o => (
+            <SimpleNavItem key={o.id} to={`/opening-trainer/${o.id}`} label={o.name} />
+          ))}
+        </ul>
         <div className="sidebar-sub-label" aria-hidden="true">For White — Learn</div>
         <ul role="list" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
           {WHITE_OPENINGS.map(o => (

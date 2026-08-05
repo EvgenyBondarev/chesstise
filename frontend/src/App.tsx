@@ -12,9 +12,18 @@ import CrossSearch from './components/exercises/CrossSearch';
 import EndgameStudy from './components/exercises/EndgameStudy';
 import OpeningRecall from './components/exercises/OpeningRecall';
 import CalculationTrainer from './components/exercises/CalculationTrainer';
+import OpeningTrainerComponent from './components/exercises/OpeningTrainer';
 import { findGame } from './data/classicalGames';
 import { findGameAcrossPlayers } from './data/playerRegistry';
+import { findTrainer } from './data/openingTrainers';
 import type { ClassicalGame as GameData } from './data/classicalGames';
+
+function OpeningTrainerPage() {
+  const { id } = useParams<{ id: string }>();
+  const trainer = id ? findTrainer(id) : undefined;
+  if (!trainer) return <div className="exercise-page"><p style={{ padding: '2rem' }}>Opening not found.</p></div>;
+  return <OpeningTrainerComponent key={trainer.id} opening={trainer} />;
+}
 
 function ClassicalGamePage() {
   const { gameId } = useParams<{ gameId: string }>();
@@ -49,6 +58,7 @@ export default function App() {
         <Route path="/games/:gameId"       element={<ClassicalGamePage />} />
         <Route path="/endgame"             element={<EndgameStudy />} />
         <Route path="/calculation"         element={<CalculationTrainer />} />
+        <Route path="/opening-trainer/:id" element={<OpeningTrainerPage />} />
       </Routes>
     </AppLayout>
   );
