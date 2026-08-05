@@ -412,5 +412,3 @@ export const ENDGAME_POSITIONS: EndgamePosition[] = [
 ];
 
 export const ENDGAME_CATEGORIES = [...new Set(ENDGAME_POSITIONS.map(p => p.category))];
-
-export const ENDGAME_CATEGORIES = [...new Set(ENDGAME_POSITIONS.map(p => p.category))];
