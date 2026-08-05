@@ -124,6 +124,8 @@ export default function SquareColorDrill() {
     setLast(null);
     setFinalCorrect(0);
     setIsNewBest(false);
+    setCompleted(false);
+    setStarted(true);
     startTimer();
   }, [resetStats, startTimer]);
 
