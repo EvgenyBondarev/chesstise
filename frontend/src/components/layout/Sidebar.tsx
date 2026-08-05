@@ -5,7 +5,7 @@ import { WHITE_OPENINGS, BLACK_OPENINGS } from '../../data/openings';
 import { TRAINER_WHITE, TRAINER_BLACK } from '../../data/openingTrainers';
 import { STRUCTURES } from '../../data/structures';
 import { PLAYER_REGISTRY } from '../../data/playerRegistry';
-import { CURATED_GAMES } from '../../data/classicalGamesSelection';
+import { CURATED_GAMES, PATTERN_LABELS } from '../../data/classicalGamesSelection';
 import { useAuthStore } from '../../store/authStore';
 import { useProfileStore } from '../../store/profileStore';
 import { setGlobalSpeechRate } from '../../utils/speechUtils';
@@ -48,12 +48,13 @@ function NavItem({ to, icon, label, desc }: { to: string; icon: string; label: s
   );
 }
 
-function SimpleNavItem({ to, label }: { to: string; label: string }) {
+function SimpleNavItem({ to, label, title }: { to: string; label: string; title?: string }) {
   return (
     <li>
       <NavLink
         to={to}
         className={({ isActive }) => `nav-item nav-item-compact${isActive ? ' active' : ''}`}
+        title={title}
       >
         {label}
       </NavLink>
@@ -135,7 +136,12 @@ export default function Sidebar({ onSignIn, isOpen }: { onSignIn: () => void; is
         <summary className="sidebar-group-btn">Classical Games</summary>
         <ul role="list" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
           {CURATED_GAMES.map(g => (
-            <SimpleNavItem key={g.id} to={`/games/${g.id}`} label={g.label} />
+            <SimpleNavItem
+              key={g.id}
+              to={`/games/${g.id}`}
+              label={g.label}
+              title={g.patterns.map(k => PATTERN_LABELS[k]).filter(Boolean).join(' · ')}
+            />
           ))}
         </ul>
       </details>

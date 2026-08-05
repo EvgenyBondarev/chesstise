@@ -19,8 +19,7 @@ export const STRUCTURES: PawnStructure[] = [
     fen: '4k3/pp3ppp/2p5/3p4/4P3/2P5/PP3PPP/4K3 w - - 0 1',
     summary: 'White has a central space advantage; Black seeks to challenge with c5 or e5.',
     transitions: [
-      { trigger: 'c4',   toName: 'Panov Formation', toId: 'panov-formation' },
-      { trigger: 'exd5', toName: 'Slav Formation',  toId: 'slav-formation'  },
+      { trigger: 'exd5', toName: 'Slav Formation', toId: 'slav-formation' },
     ],
   },
   {
@@ -44,18 +43,7 @@ export const STRUCTURES: PawnStructure[] = [
     name: 'The Sicilian-Dragon',
     fen: '4k3/pp2pp1p/3p2p1/8/4P3/8/PPP2PPP/4K3 w - - 0 1',
     summary: 'A hyper-aggressive kingside fianchetto with deep pressure on the long diagonal.',
-    transitions: [
-      { trigger: 'c4', toName: 'Maróczy Bind', toId: 'maroczy-bind' },
-    ],
-  },
-  {
-    id: 'maroczy-bind',
-    name: 'The Maróczy Bind',
-    fen: '4k3/pp2pp1p/3p2p1/8/2P1P3/8/PP3PPP/4K3 w - - 0 1',
-    summary: "White's pawns on c4 and e4 exert a death-grip on the d5 square, cramping Black.",
-    transitions: [
-      { trigger: 'd5', toName: 'Sicilian Dragon', toId: 'sicilian-dragon' },
-    ],
+    transitions: [],
   },
   {
     id: 'hedgehog',
@@ -107,8 +95,7 @@ export const STRUCTURES: PawnStructure[] = [
     fen: '4k3/pp3ppp/2p5/3p4/3P4/8/PP3PPP/4K3 w - - 0 1',
     summary: "Symmetrical center leading to White's 'Minority Attack' (pushing a-b pawns against b-c pawns).",
     transitions: [
-      { trigger: 'b4-b5', toName: 'Panov Formation', toId: 'panov-formation' },
-      { trigger: 'e4',    toName: 'Caro Formation',  toId: 'caro-formation'  },
+      { trigger: 'e4', toName: 'Caro Formation', toId: 'caro-formation' },
     ],
   },
   {
@@ -119,23 +106,6 @@ export const STRUCTURES: PawnStructure[] = [
     transitions: [
       { trigger: 'e6', toName: 'd5-Chain (French)', toId: 'french-d5-chain' },
     ],
-  },
-  {
-    id: 'panov-formation',
-    name: 'The Panov Formation',
-    fen: '4k3/pp3ppp/2p5/3p4/2PP4/8/PP3PPP/4K3 w - - 0 1',
-    summary: 'An aggressive lead-in to an IQP where White maintains pressure on the d5 point.',
-    transitions: [
-      { trigger: 'cxd5', toName: 'Isolani (IQP)',  toId: 'isolani'       },
-      { trigger: 'c5',   toName: 'Hanging Pawns', toId: 'hanging-pawns' },
-    ],
-  },
-  {
-    id: 'boleslavsky-hole',
-    name: 'The Boleslavsky Hole',
-    fen: '4k3/pp2pp1p/3p2p1/4n3/4P3/8/PPP2PPP/4K3 w - - 0 1',
-    summary: 'Black voluntarily weakens d5 to get active piece play and pressure on the e4 pawn.',
-    transitions: [],
   },
 ];
 
