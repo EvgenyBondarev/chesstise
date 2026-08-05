@@ -507,8 +507,9 @@ button { cursor: pointer; border: none; font-family: inherit; }
   flex-direction: column;
   gap: 1rem;
   width: 100%;
-  max-width: 800px;
+  max-width: 400px;
 }
+.exercise-page--wide { max-width: none; }
 
 .exercise-title {
   font-size: 1rem;

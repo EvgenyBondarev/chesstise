@@ -355,7 +355,7 @@ export default function CellGuesser() {
 
 	// ── In-game ──────────────────────────────────────────────────
 	return (
-		<div className='exercise-page'>
+		<div className='exercise-page exercise-page--wide'>
 			<div
 				role='status'
 				aria-live='polite'

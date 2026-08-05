@@ -104,12 +104,16 @@ export default function SquareColorDrill() {
     setTimeout(advance, ok ? 380 : 750);
   }, [answer, current, lastResult, recordAttempt, announce, advance]);
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (!started) return;
-    if (e.key === 'd' || e.key === 'D') { e.preventDefault(); guess('dark'); }
-    if (e.key === 'l' || e.key === 'L') { e.preventDefault(); guess('light'); }
-  }, [started, guess]);
-
+  useEffect(() => {
+    if (!started || completed) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key === 'd' || e.key === 'D') { e.preventDefault(); guess('dark'); }
+      else if (e.key === 'l' || e.key === 'L') { e.preventDefault(); guess('light'); }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [started, completed, guess]);
 
   const handleStart = useCallback(() => {
     startTimer();
@@ -255,7 +259,6 @@ export default function SquareColorDrill() {
           ref={appRef}
           tabIndex={0}
           className="color-drill-left"
-          onKeyDown={handleKeyDown}
           style={{ outline: 'none' }}
         >
           {/* Dual live regions so same-text re-announces in NVDA */}

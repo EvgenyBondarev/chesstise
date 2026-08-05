@@ -49,9 +49,15 @@ export default function EndgameStudy() {
     setBuf(''); setStatus('idle'); setShowHint(false); setAttempts(0);
   }, [idx, positions]);
 
+  useEffect(() => {
+    if (status !== 'correct') return;
+    const t = setTimeout(advance, 2000);
+    return () => clearTimeout(t);
+  }, [status, advance]);
+
   const handleKey = useCallback((e: KeyboardEvent) => {
     if (done) return;
-    if (status === 'correct') { if (e.key === 'Enter' || e.key === ' ') advance(); return; }
+    if (status === 'correct') { advance(); return; }
     if (status === 'wrong') return;
 
     const k = e.key;
