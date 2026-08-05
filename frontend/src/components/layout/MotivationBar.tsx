@@ -363,8 +363,8 @@ export default function MotivationBar() {
                 </thead>
                 <tbody>
                   {historyRows.map(({ date, goalH: gh, doneMs }) => {
-                    const met    = gh > 0 && doneMs >= gh * 3_600_000;
-                    const behind = gh > 0 && doneMs < gh * 3_600_000;
+                    const met    = gh > 0 && Math.floor(doneMs / 60_000) >= Math.floor(gh * 3_600_000 / 60_000);
+                    const behind = gh > 0 && !met;
                     return (
                       <tr key={date} className={date === todayKey ? 'motivation-history-today' : ''}>
                         <td>{shortDate(date)}</td>
