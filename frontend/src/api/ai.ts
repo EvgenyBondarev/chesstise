@@ -93,9 +93,9 @@ export async function fetchGroqQuestion(
     `Chess coach answering a student question. Question: "${question}"\n` +
     `FEN: ${fen}\n` +
     `Moves so far: ${pgn}\n\n` +
-    `Answer directly — no "Great question" or preamble. Name every piece and square (e.g. "the knight on f3", "the c6 bishop"). ` +
+    `Answer directly — no "Great question" or preamble. ` +
+    `Only state things you can verify from the position; do NOT invent piece locations or relationships. ` +
     `If recommending a move, write it in algebraic notation. ` +
-    `If there is a best continuation, name it. ` +
     `Never say "better position" or "active pieces" without naming exactly what is won, lost, or controlled. ` +
     `2-3 sentences, level: knows basic tactics, not deep strategy.`;
   return callGroq(prompt);
@@ -112,10 +112,10 @@ export async function fetchGeminiExplain(
     `FEN: ${fen}\n` +
     `Recent moves: ${pgn}\n` +
     (evalHint ? `Engine evaluation before → after: ${evalHint}\n` : '') +
-    `\nIn 1-2 sentences, state what this move concretely does: which piece or square it attacks, defends, or secures. ` +
-    `Name every piece and square. Do NOT start with "This move" or any preamble. ` +
-    `Do NOT claim the move is strong or best unless the evaluation shows it is. ` +
-    `If the evaluation dropped significantly, acknowledge the move was inaccurate and say what was lost.`;
+    `\n1-2 sentences. Say only what this move directly and concretely does: where the piece went and what it immediately threatens or captures. ` +
+    `Do NOT invent piece relationships — only state things you are certain about from the position. ` +
+    `Do NOT start with "This move". ` +
+    `If the evaluation dropped, call it an inaccuracy and name what was missed.`;
   return callGroq(prompt);
 }
 
