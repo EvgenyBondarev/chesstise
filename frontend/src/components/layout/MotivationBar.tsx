@@ -74,6 +74,7 @@ export default function MotivationBar() {
 
   const [now, setNow]                     = useState(() => new Date());
   const [showLateAlert, setShowLateAlert] = useState(false);
+  const [showHistory, setShowHistory]     = useState(false);
   const [showManual, setShowManual]       = useState(false);
   const [manualH, setManualH]             = useState(0);
   const [manualM, setManualM]             = useState(0);
@@ -263,6 +264,12 @@ export default function MotivationBar() {
           {formatHM(actualMs)}{hasGoal ? ` / ${formatHM(goalHours * 3_600_000)}` : ''}
         </span>
 
+        {historyRows.length > 0 && (
+          <button className="motivation-history-btn" onClick={() => setShowHistory(true)}>
+            History
+          </button>
+        )}
+
         <div className="motivation-manual-wrap" ref={manualRef}>
           <button
             className="motivation-manual-btn"
@@ -331,35 +338,50 @@ export default function MotivationBar() {
         </span>
       </div>
 
-      {historyRows.length > 0 && (
-        <div className="motivation-history">
-          <table>
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Goal</th>
-                <th>Done</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {historyRows.map(({ date, goalH: gh, doneMs }) => {
-                const met    = gh > 0 && doneMs >= gh * 3_600_000;
-                const behind = gh > 0 && doneMs < gh * 3_600_000;
-                return (
-                  <tr key={date} className={date === todayKey ? 'motivation-history-today' : ''}>
-                    <td>{shortDate(date)}</td>
-                    <td>{gh > 0 ? formatHM(gh * 3_600_000) : '—'}</td>
-                    <td>{doneMs > 0 ? formatHM(doneMs) : '—'}</td>
-                    <td className={met ? 'hist-met' : behind ? 'hist-behind' : ''}>
-                      {met ? '✓' : behind ? '✗' : ''}
-                    </td>
+      {showHistory && createPortal(
+        <div className="modal-backdrop" onClick={() => setShowHistory(false)}>
+          <div
+            className="modal-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Practice history"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="modal-header">
+              <span className="modal-title">Practice history</span>
+              <button className="modal-close-btn" onClick={() => setShowHistory(false)} aria-label="Close">×</button>
+            </div>
+            <div className="motivation-history">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Goal</th>
+                    <th>Done</th>
+                    <th></th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                </thead>
+                <tbody>
+                  {historyRows.map(({ date, goalH: gh, doneMs }) => {
+                    const met    = gh > 0 && doneMs >= gh * 3_600_000;
+                    const behind = gh > 0 && doneMs < gh * 3_600_000;
+                    return (
+                      <tr key={date} className={date === todayKey ? 'motivation-history-today' : ''}>
+                        <td>{shortDate(date)}</td>
+                        <td>{gh > 0 ? formatHM(gh * 3_600_000) : '—'}</td>
+                        <td>{doneMs > 0 ? formatHM(doneMs) : '—'}</td>
+                        <td className={met ? 'hist-met' : behind ? 'hist-behind' : ''}>
+                          {met ? '✓' : behind ? '✗' : ''}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>,
+        document.body,
       )}
 
       {showLateAlert && createPortal(
