@@ -24,22 +24,15 @@ type Perspective = 'white' | 'black' | 'both'
 type Entry = { square: Square; orientation: BoardOrientation }
 
 function buildDeck(p: Perspective): Entry[] {
-	const entries: Entry[] = []
-	if (p !== 'black')
-		entries.push(
-			...ALL_SQUARES.map((sq) => ({
-				square: sq,
-				orientation: 'white' as BoardOrientation,
-			}))
-		)
-	if (p !== 'white')
-		entries.push(
-			...ALL_SQUARES.map((sq) => ({
-				square: sq,
-				orientation: 'black' as BoardOrientation,
-			}))
-		)
-	return noConsecDupes(shuffleArray(entries).slice(0, ROUND_SIZE), e => e.square)
+	if (p !== 'both') {
+		const entries = ALL_SQUARES.map(sq => ({ square: sq, orientation: p as BoardOrientation }))
+		return noConsecDupes(shuffleArray(entries).slice(0, ROUND_SIZE), e => e.square)
+	}
+	// 'both': guarantee exactly half white, half black so neither side dominates
+	const half = ROUND_SIZE >> 1
+	const wPool = shuffleArray(ALL_SQUARES.map(sq => ({ square: sq, orientation: 'white' as BoardOrientation })))
+	const bPool = shuffleArray(ALL_SQUARES.map(sq => ({ square: sq, orientation: 'black' as BoardOrientation })))
+	return noConsecDupes(shuffleArray([...wPool.slice(0, half), ...bPool.slice(0, half)]), e => e.square)
 }
 
 function homeSquare(o: BoardOrientation): Square {
@@ -180,6 +173,7 @@ export default function CellGuesser() {
 		setLast(null)
 		setFinalCorrect(0)
 		setIsNewBest(false)
+		setCompleted(false)
 		startTimer()
 	}, [perspective, resetStats, startTimer])
 

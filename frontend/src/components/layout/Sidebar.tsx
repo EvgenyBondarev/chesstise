@@ -132,7 +132,7 @@ export default function Sidebar({ onSignIn, isOpen }: { onSignIn: () => void; is
       <h2 className="sr-only">Chesstíse – Blindfold Chess Trainer</h2>
 
       {/* ── Classical Games ── */}
-      <details className="sidebar-group">
+      <details className="sidebar-group" open>
         <summary className="sidebar-group-btn">Classical Games</summary>
         <ul role="list" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
           {CURATED_GAMES.map(g => (

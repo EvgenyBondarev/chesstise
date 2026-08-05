@@ -24,23 +24,61 @@ export function speak(text: string): void {
 
 export function playCongratsSound(): void {
   try {
-    const ctx   = new AudioContext();
-    const t     = ctx.currentTime;
-    const notes = [523.25, 659.25, 783.99, 1046.50]; // C5 E5 G5 C6
-    notes.forEach((freq, i) => {
-      const osc  = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
+    const ctx = new AudioContext();
+    const t   = ctx.currentTime;
+
+    const hit = (
+      freq: number, start: number, dur: number, vol: number,
+      type: OscillatorType = 'square'
+    ) => {
+      const osc = ctx.createOscillator();
+      const g   = ctx.createGain();
+      osc.type = type;
+      osc.frequency.value = freq;
+      osc.connect(g);
+      g.connect(ctx.destination);
+      g.gain.setValueAtTime(0, start);
+      g.gain.linearRampToValueAtTime(vol, start + 0.015);
+      g.gain.setValueAtTime(vol * 0.65, start + dur * 0.55);
+      g.gain.exponentialRampToValueAtTime(0.001, start + dur);
+      osc.start(start);
+      osc.stop(start + dur + 0.05);
+    };
+
+    // Rising brass fanfare: C4 → G4 → C5 → E5 → G5
+    hit(261.63, t + 0.00, 0.13, 0.22);
+    hit(392.00, t + 0.11, 0.13, 0.22);
+    hit(523.25, t + 0.22, 0.14, 0.25);
+    hit(659.25, t + 0.34, 0.16, 0.28);
+    hit(783.99, t + 0.48, 0.18, 0.28);
+
+    // Climactic top chord: C6 + E6 + G6
+    hit(1046.50, t + 0.64, 0.55, 0.28);
+    hit(1318.51, t + 0.70, 0.48, 0.18);
+    hit(1567.98, t + 0.76, 0.42, 0.14);
+
+    // Bass punches
+    hit(65.41,  t + 0.00, 0.30, 0.45, 'sine'); // C2 at opening
+    hit(130.81, t + 0.64, 0.55, 0.40, 'sine'); // C3 at climax
+
+    // Sustained C major chord swell (the "epic" hold)
+    const chordFreqs = [130.81, 261.63, 329.63, 392.00, 523.25, 659.25, 783.99, 1046.50];
+    chordFreqs.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const g   = ctx.createGain();
       osc.type = 'sine';
       osc.frequency.value = freq;
-      const start = t + i * 0.11;
-      gain.gain.setValueAtTime(0, start);
-      gain.gain.linearRampToValueAtTime(0.28, start + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.001, start + 0.35);
-      osc.start(start);
-      osc.stop(start + 0.35);
-      if (i === notes.length - 1) osc.onended = () => ctx.close();
+      osc.connect(g);
+      g.connect(ctx.destination);
+      const s   = t + 0.82;
+      const vol = Math.max(0.02, 0.13 - i * 0.012);
+      g.gain.setValueAtTime(0, s);
+      g.gain.linearRampToValueAtTime(vol, s + 0.10);
+      g.gain.setValueAtTime(vol, s + 0.90);
+      g.gain.exponentialRampToValueAtTime(0.001, s + 2.30);
+      osc.start(s);
+      osc.stop(s + 2.40);
+      if (i === chordFreqs.length - 1) osc.onended = () => ctx.close();
     });
   } catch { /* AudioContext unavailable */ }
 }

@@ -160,9 +160,9 @@ export default function MotivationBar() {
 
   // Triumph sound when goal is first met this session
   useEffect(() => {
-    const { goalHours: gh, actualHours: ah } = goalData;
+    const { goalHours: gh, actualMs } = goalData;
     if (gh <= 0) { goalMetRef.current = false; return; }
-    const met = ah >= gh;
+    const met = actualMs >= Math.round(gh * 3_600_000);
     if (met && !goalMetRef.current) { goalMetRef.current = true; playCongratsSound(); }
     if (!met) goalMetRef.current = false;
   }, [goalData]);
@@ -371,7 +371,7 @@ export default function MotivationBar() {
                 </thead>
                 <tbody>
                   {historyRows.map(({ date, goalH: gh, doneMs }) => {
-                    const met    = gh > 0 && Math.floor(doneMs / 60_000) >= Math.floor(gh * 3_600_000 / 60_000);
+                    const met    = gh > 0 && Math.floor(doneMs / 60_000) >= Math.round(gh * 60);
                     const behind = gh > 0 && !met;
                     return (
                       <tr key={date} className={date === todayKey ? 'motivation-history-today' : ''}>

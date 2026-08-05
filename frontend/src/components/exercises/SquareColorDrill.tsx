@@ -43,8 +43,9 @@ export default function SquareColorDrill() {
   const [isNewBest, setIsNewBest] = useState(false);
   useEffect(() => { if (isNewBest) playCongratsSound(); }, [isNewBest]);
 
-  const appRef     = useRef<HTMLDivElement>(null);
-  const correctRef = useRef(0);
+  const appRef          = useRef<HTMLDivElement>(null);
+  const correctRef      = useRef(0);
+  const pendingRestart  = useRef(false);
   const { elapsed, start: startTimer, stop: stopTimer } = useStopwatch();
 
   const bestRun =
@@ -129,9 +130,17 @@ export default function SquareColorDrill() {
     setFinalCorrect(0);
     setIsNewBest(false);
     setCompleted(false);
-    setStarted(true);
+    pendingRestart.current = true;
+    setStarted(false);
+  }, [resetStats]);
+
+  // Auto-start after a restart once the pregame state is committed
+  useEffect(() => {
+    if (!pendingRestart.current || started || completed) return;
+    pendingRestart.current = false;
     startTimer();
-  }, [resetStats, startTimer]);
+    setStarted(true);
+  }, [started, completed, startTimer]);
 
   useEffect(() => {
     if (started && !completed) return;
