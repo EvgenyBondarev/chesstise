@@ -69,6 +69,7 @@ export default function MotivationBar() {
   const setGoalHours    = useMotivationStore(s => s.setGoalHours);
   const addManualMs     = useMotivationStore(s => s.addManualMs);
   const clearManualMs   = useMotivationStore(s => s.clearManualMs);
+  const clearAll        = useMotivationStore(s => s.clearAll);
   const start           = useMotivationStore(s => s.start);
   const stop            = useMotivationStore(s => s.stop);
 
@@ -349,6 +350,13 @@ export default function MotivationBar() {
           >
             <div className="modal-header">
               <span className="modal-title">Practice history</span>
+              <button
+                className="motivation-manual-clear"
+                style={{ marginRight: 'auto', marginLeft: '0.75rem' }}
+                onClick={() => { clearAll(); setShowHistory(false); }}
+              >
+                Clear all
+              </button>
               <button className="modal-close-btn" onClick={() => setShowHistory(false)} aria-label="Close">×</button>
             </div>
             <div className="motivation-history">

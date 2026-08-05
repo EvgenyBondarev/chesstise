@@ -17,6 +17,7 @@ interface MotivationState {
   setGoalHours:  (date: string, hours: number) => void;
   addManualMs:   (date: string, ms: number) => void;
   clearManualMs: (date: string) => void;
+  clearAll: () => void;
   start: () => void;
   stop:  () => void;
 }
@@ -46,6 +47,8 @@ export const useMotivationStore = create<MotivationState>()(
           delete next[date];
           return { manualMsByDate: next };
         }),
+
+      clearAll: () => set({ goalHoursByDate: {}, manualMsByDate: {}, sessions: [], running: null }),
 
       start: () => {
         if (get().running) return;
