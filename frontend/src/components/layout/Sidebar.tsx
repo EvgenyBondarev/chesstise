@@ -5,6 +5,7 @@ import { WHITE_OPENINGS, BLACK_OPENINGS } from '../../data/openings';
 import { TRAINER_WHITE, TRAINER_BLACK } from '../../data/openingTrainers';
 import { STRUCTURES } from '../../data/structures';
 import { PLAYER_REGISTRY } from '../../data/playerRegistry';
+import { CURATED_GAMES } from '../../data/classicalGamesSelection';
 import { useAuthStore } from '../../store/authStore';
 import { useProfileStore } from '../../store/profileStore';
 import { setGlobalSpeechRate } from '../../utils/speechUtils';
@@ -130,8 +131,18 @@ export default function Sidebar({ onSignIn, isOpen }: { onSignIn: () => void; is
       <h2 className="sr-only">Chesstíse – Blindfold Chess Trainer</h2>
 
       {/* ── Classical Games ── */}
-      <details className="sidebar-group" open>
+      <details className="sidebar-group">
         <summary className="sidebar-group-btn">Classical Games</summary>
+        <ul role="list" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+          {CURATED_GAMES.map(g => (
+            <SimpleNavItem key={g.id} to={`/games/${g.id}`} label={g.label} />
+          ))}
+        </ul>
+      </details>
+
+      {/* ── Masters Games ── */}
+      <details className="sidebar-group" open>
+        <summary className="sidebar-group-btn">Masters Games</summary>
         <SimpleNavItem to="/cross-search" label="⇄ Cross-player search" />
         <PlayerSearch />
       </details>
