@@ -2,80 +2,54 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { getDateKey } from '../utils/motivation';
 
-export type GoalType = 'chess' | 'zazen';
-
-export const GOAL_LABELS: Record<GoalType, string> = {
-  chess: '♟ Chess',
-  zazen: '◯ Zazen',
-};
-
-export const GOAL_ACTION: Record<GoalType, string> = {
-  chess: 'play',
-  zazen: 'meditate',
-};
-
 export interface WorkSession {
   date: string;
   startMs: number;
   endMs: number;
-  type: GoalType;
 }
 
 interface MotivationState {
-  goalHoursByDateByType: Record<GoalType, Record<string, number>>;
-  manualMsByDateByType:  Record<GoalType, Record<string, number>>;
-  sessions:   WorkSession[];
-  running:    { startedAt: number; type: GoalType } | null;
-  activeGoal: GoalType;
+  goalHoursByDate: Record<string, number>;
+  manualMsByDate:  Record<string, number>;
+  sessions:  WorkSession[];
+  running:   { startedAt: number } | null;
 
-  setGoalHours:  (type: GoalType, date: string, hours: number) => void;
-  addManualMs:   (type: GoalType, date: string, ms: number) => void;
-  clearManualMs: (type: GoalType, date: string) => void;
-  setActiveGoal: (type: GoalType) => void;
-  start: (type: GoalType) => void;
+  setGoalHours:  (date: string, hours: number) => void;
+  addManualMs:   (date: string, ms: number) => void;
+  clearManualMs: (date: string) => void;
+  start: () => void;
   stop:  () => void;
 }
 
 export const useMotivationStore = create<MotivationState>()(
   persist(
     (set, get) => ({
-      goalHoursByDateByType: { chess: {}, zazen: {} },
-      manualMsByDateByType:  { chess: {}, zazen: {} },
-      sessions:   [],
-      running:    null,
-      activeGoal: 'chess',
+      goalHoursByDate: {},
+      manualMsByDate:  {},
+      sessions:  [],
+      running:   null,
 
-      setGoalHours: (type, date, hours) =>
+      setGoalHours: (date, hours) =>
+        set(state => ({ goalHoursByDate: { ...state.goalHoursByDate, [date]: hours } })),
+
+      addManualMs: (date, ms) =>
         set(state => ({
-          goalHoursByDateByType: {
-            ...state.goalHoursByDateByType,
-            [type]: { ...state.goalHoursByDateByType[type], [date]: hours },
+          manualMsByDate: {
+            ...state.manualMsByDate,
+            [date]: (state.manualMsByDate[date] ?? 0) + ms,
           },
         })),
 
-      addManualMs: (type, date, ms) =>
-        set(state => ({
-          manualMsByDateByType: {
-            ...state.manualMsByDateByType,
-            [type]: {
-              ...state.manualMsByDateByType[type],
-              [date]: (state.manualMsByDateByType[type]?.[date] ?? 0) + ms,
-            },
-          },
-        })),
-
-      clearManualMs: (type, date) =>
+      clearManualMs: (date) =>
         set(state => {
-          const next = { ...state.manualMsByDateByType[type] };
+          const next = { ...state.manualMsByDate };
           delete next[date];
-          return { manualMsByDateByType: { ...state.manualMsByDateByType, [type]: next } };
+          return { manualMsByDate: next };
         }),
 
-      setActiveGoal: (type) => set({ activeGoal: type }),
-
-      start: (type) => {
+      start: () => {
         if (get().running) return;
-        set({ running: { startedAt: Date.now(), type } });
+        set({ running: { startedAt: Date.now() } });
       },
 
       stop: () => {
@@ -85,7 +59,7 @@ export const useMotivationStore = create<MotivationState>()(
         set(state => ({
           sessions: [
             ...state.sessions,
-            { date: getDateKey(new Date(running.startedAt)), startMs: running.startedAt, endMs, type: running.type },
+            { date: getDateKey(new Date(running.startedAt)), startMs: running.startedAt, endMs },
           ],
           running: null,
         }));
@@ -93,21 +67,18 @@ export const useMotivationStore = create<MotivationState>()(
     }),
     {
       name: 'chesstise-motivation',
-      version: 2,
+      version: 3,
       migrate: (persisted: any, version: number) => {
-        if (version < 2) {
+        if (version < 3) {
+          // v1: flat goalHoursByDate / manualMsByDate
+          // v2: goalHoursByDateByType / manualMsByDateByType (chess + zazen)
+          const byType    = persisted.goalHoursByDateByType;
+          const manByType = persisted.manualMsByDateByType;
           return {
-            goalHoursByDateByType: {
-              chess: persisted.goalHoursByDate ?? {},
-              zazen: {},
-            },
-            manualMsByDateByType: {
-              chess: persisted.manualMsByDate ?? {},
-              zazen: {},
-            },
-            sessions: (persisted.sessions ?? []).map((s: any) => ({ ...s, type: 'chess' as GoalType })),
-            running: persisted.running ? { ...persisted.running, type: 'chess' as GoalType } : null,
-            activeGoal: 'chess' as GoalType,
+            goalHoursByDate: byType    ? (byType.chess    ?? {}) : (persisted.goalHoursByDate    ?? {}),
+            manualMsByDate:  manByType ? (manByType.chess ?? {}) : (persisted.manualMsByDate ?? {}),
+            sessions: (persisted.sessions ?? []).map(({ type: _t, ...s }: any) => s),
+            running:  persisted.running ? { startedAt: persisted.running.startedAt } : null,
           };
         }
         return persisted as MotivationState;

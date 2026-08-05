@@ -8,6 +8,10 @@ import type { LichessEval } from '../../api/ai';
 import type { ClassicalGame as GameData } from '../../data/classicalGames';
 import CollapsibleBoard from '../common/CollapsibleBoard';
 
+const FILE_FROM_KEY: Record<string, string> = { a: 'a', s: 'b', d: 'c', f: 'd', j: 'e', k: 'f', l: 'g', ';': 'h' };
+const RANK_FROM_KEY: Record<string, number>  = { a: 1, s: 2, d: 3, f: 4, j: 5, k: 6, l: 7, ';': 8 };
+const FILE_RANK_KEYS = new Set(Object.keys(FILE_FROM_KEY));
+
 interface PositionData {
   fens:   string[];
   arrows: ([Square, Square] | null)[];
@@ -101,11 +105,14 @@ export default function ClassicalGame({ game }: { game: GameData }) {
 
   const [customQ,        setCustomQ]       = useState('');
   const [boardWidth,     setBoardWidth]    = useState(() => Math.min(360, window.innerWidth - 32));
-  const lastSpokenRef    = useRef('');
-  const prevQRef         = useRef('');
-  const keyHandlerRef    = useRef<((e: KeyboardEvent) => void) | null>(null);
-  const questionInputRef = useRef<HTMLInputElement>(null);
-  const boardContainerRef = useRef<HTMLDivElement>(null);
+  const [highlightedSquare, setHighlightedSquare] = useState<Square | null>(null);
+  const lastSpokenRef      = useRef('');
+  const prevQRef           = useRef('');
+  const keyHandlerRef      = useRef<((e: KeyboardEvent) => void) | null>(null);
+  const questionInputRef   = useRef<HTMLInputElement>(null);
+  const boardContainerRef  = useRef<HTMLDivElement>(null);
+  const highlightBufferRef = useRef('');
+  const highlightTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const el = boardContainerRef.current;
@@ -130,6 +137,9 @@ export default function ClassicalGame({ game }: { game: GameData }) {
     setCommentary(null);
     setMoveClassifications({});
     setPositionEvals([]);
+    setHighlightedSquare(null);
+    highlightBufferRef.current = '';
+    if (highlightTimerRef.current) { clearTimeout(highlightTimerRef.current); highlightTimerRef.current = null; }
     say(`${game.white} versus ${game.black}. Press J to advance moves, A or Space for commentary.`);
 
     let cancelled = false;
@@ -229,13 +239,32 @@ export default function ClassicalGame({ game }: { game: GameData }) {
     const active = document.activeElement as HTMLElement | null;
     if (active && ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName)) return;
     const { key, code } = e;
-    if (key === 'Control')        { stopSpeaking(); return; }
-    if (key === 'ArrowLeft')      { e.preventDefault(); handleF(); return; }
-    if (key === 'ArrowRight')     { e.preventDefault(); handleJ(); return; }
-    if (key === 'ArrowDown')      { e.preventDefault(); handleK(); return; }
-    if (key === 'ArrowUp')        { e.preventDefault(); questionInputRef.current?.focus(); return; }
+
+    if (key === 'Control') { highlightBufferRef.current = ''; stopSpeaking(); return; }
+    if (key === 'ArrowLeft'  || key === 'g') { highlightBufferRef.current = ''; e.preventDefault(); handleF(); return; }
+    if (key === 'ArrowRight' || key === 'h') { highlightBufferRef.current = ''; e.preventDefault(); handleJ(); return; }
+    if (key === 'ArrowDown')  { highlightBufferRef.current = ''; e.preventDefault(); handleK(); return; }
+    if (key === 'ArrowUp')    { highlightBufferRef.current = ''; e.preventDefault(); questionInputRef.current?.focus(); return; }
+    if (key === 'r')          { highlightBufferRef.current = ''; e.preventDefault(); speak(lastSpokenRef.current); return; }
     if (code === 'Numpad0')       { e.preventDefault(); setBoardExpanded(b => !b); return; }
     if (code === 'NumpadDecimal') { e.preventDefault(); speak(lastSpokenRef.current); return; }
+
+    if (FILE_RANK_KEYS.has(key)) {
+      e.preventDefault();
+      highlightBufferRef.current += key;
+      if (highlightBufferRef.current.length === 2) {
+        const file = FILE_FROM_KEY[highlightBufferRef.current[0]];
+        const rank = RANK_FROM_KEY[highlightBufferRef.current[1]];
+        highlightBufferRef.current = '';
+        if (highlightTimerRef.current) { clearTimeout(highlightTimerRef.current); highlightTimerRef.current = null; }
+        if (file && rank) {
+          const sq = `${file}${rank}` as Square;
+          setHighlightedSquare(sq);
+          speak(`${file} ${rank}`);
+          highlightTimerRef.current = setTimeout(() => setHighlightedSquare(null), 3000);
+        }
+      }
+    }
   };
 
   useEffect(() => {
@@ -277,6 +306,7 @@ export default function ClassicalGame({ game }: { game: GameData }) {
                 showBoardNotation={false}
                 customDarkSquareStyle={{ backgroundColor: '#3d5a6e' }}
                 customLightSquareStyle={{ backgroundColor: '#7a96a8' }}
+                customSquareStyles={highlightedSquare ? { [highlightedSquare]: { backgroundColor: '#e8c240' } } : {}}
               />
             </CollapsibleBoard>
           </div>
@@ -384,7 +414,7 @@ export default function ClassicalGame({ game }: { game: GameData }) {
           </div>
 
           <div className="cg-legend">
-            ← = back | → = next | ↓ = commentary | ↑ = ask | Ctrl = stop | Calc 0 = board | Calc · = re-read
+            g/← = back | h/→ = next | ↓ = commentary | ↑ = ask | r = re-read | Ctrl = stop | Calc 0 = board | [file][rank] = highlight
           </div>
         </div>
       </div>

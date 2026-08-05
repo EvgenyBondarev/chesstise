@@ -163,17 +163,6 @@ button { cursor: pointer; border: none; font-family: inherit; }
   flex-shrink: 0;
 }
 
-.motivation-goal-select {
-  background: var(--surface);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 2px 4px;
-  font-size: 0.78rem;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-.motivation-goal-select:focus { border-color: var(--accent); outline: none; }
 
 .motivation-goal-label {
   display: flex;
@@ -460,6 +449,33 @@ button { cursor: pointer; border: none; font-family: inherit; }
   color: var(--text);
   line-height: 1.5;
 }
+
+/* ── Daily history table ── */
+.motivation-history {
+  width: 100%;
+  margin-top: 0.5rem;
+  overflow-x: auto;
+}
+.motivation-history table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+}
+.motivation-history th {
+  color: var(--muted);
+  font-weight: 600;
+  text-align: left;
+  padding: 2px 8px 4px;
+  border-bottom: 1px solid var(--border);
+}
+.motivation-history td {
+  padding: 3px 8px;
+  color: var(--muted);
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+}
+.motivation-history-today td { color: var(--text); }
+.motivation-history td.hist-met    { color: var(--accent); font-weight: 600; }
+.motivation-history td.hist-behind { color: var(--red); }
 
 @media (max-width: 640px) {
   .motivation-bar {

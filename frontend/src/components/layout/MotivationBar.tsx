@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useMotivationStore } from '../../store/motivationStore';
-import type { GoalType } from '../../store/motivationStore';
-import { GOAL_LABELS, GOAL_ACTION } from '../../store/motivationStore';
 import { playAlertSound, playCongratsSound } from '../../utils/speechUtils';
 import {
   getDateKey, expectedHours, freeUntil, formatClock, formatHM, formatStopwatch, windowFraction,
@@ -11,10 +9,13 @@ import {
 
 const TICK_HOURS  = [8, 10, 12, 14, 16, 18, 20, 22, 24];
 const LABEL_HOURS = [8, 12, 16, 20, 24];
-const GOAL_TYPES: GoalType[] = ['chess', 'zazen'];
 
 function hourPct(h: number): number {
   return ((h - WINDOW_START_HOUR) / (WINDOW_END_HOUR - WINDOW_START_HOUR)) * 100;
+}
+
+function shortDate(dateKey: string): string {
+  return new Date(`${dateKey}T00:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
 interface NumFieldProps {
@@ -61,27 +62,25 @@ function NumField({ value, onChange, min = 0, max, step = 1, ariaLabel, placehol
 }
 
 export default function MotivationBar() {
-  const goalHoursByDateByType = useMotivationStore(s => s.goalHoursByDateByType);
-  const manualMsByDateByType  = useMotivationStore(s => s.manualMsByDateByType);
-  const sessions              = useMotivationStore(s => s.sessions);
-  const running               = useMotivationStore(s => s.running);
-  const activeGoal            = useMotivationStore(s => s.activeGoal);
-  const setGoalHours          = useMotivationStore(s => s.setGoalHours);
-  const addManualMs           = useMotivationStore(s => s.addManualMs);
-  const clearManualMs         = useMotivationStore(s => s.clearManualMs);
-  const setActiveGoal         = useMotivationStore(s => s.setActiveGoal);
-  const start                 = useMotivationStore(s => s.start);
-  const stop                  = useMotivationStore(s => s.stop);
+  const goalHoursByDate = useMotivationStore(s => s.goalHoursByDate);
+  const manualMsByDate  = useMotivationStore(s => s.manualMsByDate);
+  const sessions        = useMotivationStore(s => s.sessions);
+  const running         = useMotivationStore(s => s.running);
+  const setGoalHours    = useMotivationStore(s => s.setGoalHours);
+  const addManualMs     = useMotivationStore(s => s.addManualMs);
+  const clearManualMs   = useMotivationStore(s => s.clearManualMs);
+  const start           = useMotivationStore(s => s.start);
+  const stop            = useMotivationStore(s => s.stop);
 
-  const [now, setNow]               = useState(() => new Date());
-  const [lateGoals, setLateGoals]   = useState<GoalType[]>([]);
-  const [showManual, setShowManual] = useState(false);
-  const [manualH, setManualH]       = useState(0);
-  const [manualM, setManualM]       = useState(0);
+  const [now, setNow]                     = useState(() => new Date());
+  const [showLateAlert, setShowLateAlert] = useState(false);
+  const [showManual, setShowManual]       = useState(false);
+  const [manualH, setManualH]             = useState(0);
+  const [manualM, setManualM]             = useState(0);
 
-  const lastAlertHourRef = useRef(new Date().getHours()); // fire only at hour boundaries
-  const goalMetRef       = useRef<Record<GoalType, boolean>>({ chess: false, zazen: false });
-  const manualRef    = useRef<HTMLDivElement>(null);
+  const lastAlertHourRef = useRef(new Date().getHours());
+  const goalMetRef       = useRef(false);
+  const manualRef        = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
@@ -105,104 +104,111 @@ export default function MotivationBar() {
 
   // Close late modal on Enter or Escape
   useEffect(() => {
-    if (lateGoals.length === 0) return;
+    if (!showLateAlert) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); setLateGoals([]); }
+      if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); setShowLateAlert(false); }
     };
     document.addEventListener('keydown', onKey, { capture: true });
     return () => document.removeEventListener('keydown', onKey, { capture: true });
-  }, [lateGoals]);
+  }, [showLateAlert]);
 
   const todayKey = getDateKey(now);
 
-  // Carry forward each goal's most recent non-zero value to a fresh day
+  // Carry forward most recent non-zero goal to a fresh day
   useEffect(() => {
-    for (const type of GOAL_TYPES) {
-      if (goalHoursByDateByType[type]?.[todayKey] !== undefined) continue;
-      const priorDates = Object.keys(goalHoursByDateByType[type] ?? {}).filter(d => d < todayKey).sort();
-      const lastGoal = priorDates.length ? goalHoursByDateByType[type][priorDates[priorDates.length - 1]] : 0;
-      if (lastGoal > 0) setGoalHours(type, todayKey, lastGoal);
-    }
-  }, [todayKey, goalHoursByDateByType, setGoalHours]);
+    if (goalHoursByDate[todayKey] !== undefined) return;
+    const priorDates = Object.keys(goalHoursByDate).filter(d => d < todayKey).sort();
+    const lastGoal = priorDates.length ? goalHoursByDate[priorDates[priorDates.length - 1]] : 0;
+    if (lastGoal > 0) setGoalHours(todayKey, lastGoal);
+  }, [todayKey, goalHoursByDate, setGoalHours]);
 
-  // Per-goal computed data (recalculated every second via `now`)
   const goalData = useMemo(() => {
-    return GOAL_TYPES.map(type => {
-      const goalHours    = goalHoursByDateByType[type]?.[todayKey] ?? 0;
-      const manualMs     = manualMsByDateByType[type]?.[todayKey] ?? 0;
-      const completedMs  = sessions
-        .filter(s => s.date === todayKey && s.type === type)
-        .reduce((sum, s) => sum + (s.endMs - s.startMs), 0);
-      const runningMs    = running?.type === type ? Math.max(0, now.getTime() - running.startedAt) : 0;
-      const actualMs     = completedMs + runningMs + manualMs;
-      const actualHours  = actualMs / 3_600_000;
-      const expected     = goalHours > 0 ? expectedHours(goalHours, now) : 0;
-      const isLate       = goalHours > 0 && actualHours < expected;
-      return { type, goalHours, actualMs, actualHours, expected, isLate };
-    });
-  }, [goalHoursByDateByType, manualMsByDateByType, sessions, running, now, todayKey]);
+    const goalHours   = goalHoursByDate[todayKey] ?? 0;
+    const manualMs    = manualMsByDate[todayKey] ?? 0;
+    const completedMs = sessions
+      .filter(s => s.date === todayKey)
+      .reduce((sum, s) => sum + (s.endMs - s.startMs), 0);
+    const runningMs   = running ? Math.max(0, now.getTime() - running.startedAt) : 0;
+    const actualMs    = completedMs + runningMs + manualMs;
+    const actualHours = actualMs / 3_600_000;
+    const expected    = goalHours > 0 ? expectedHours(goalHours, now) : 0;
+    const isLate      = goalHours > 0 && actualHours < expected;
+    return { goalHours, actualMs, actualHours, expected, isLate };
+  }, [goalHoursByDate, manualMsByDate, sessions, running, now, todayKey]);
 
-  const activeData = goalData.find(d => d.type === activeGoal)!;
-  const { goalHours, actualMs, actualHours, isLate } = activeData;
+  // History rows: all days with data, newest first
+  const historyRows = useMemo(() => {
+    const allDates = new Set([
+      ...Object.keys(goalHoursByDate),
+      ...Object.keys(manualMsByDate),
+      ...sessions.map(s => s.date),
+    ]);
+    return Array.from(allDates)
+      .sort()
+      .reverse()
+      .map(date => {
+        const goalH  = goalHoursByDate[date] ?? 0;
+        const manMs  = manualMsByDate[date] ?? 0;
+        const doneMs = sessions
+          .filter(s => s.date === date)
+          .reduce((sum, s) => sum + (s.endMs - s.startMs), 0) + manMs;
+        return { date, goalH, doneMs };
+      });
+  }, [goalHoursByDate, manualMsByDate, sessions]);
+
+  // Triumph sound when goal is first met this session
+  useEffect(() => {
+    const { goalHours: gh, actualHours: ah } = goalData;
+    if (gh <= 0) { goalMetRef.current = false; return; }
+    const met = ah >= gh;
+    if (met && !goalMetRef.current) { goalMetRef.current = true; playCongratsSound(); }
+    if (!met) goalMetRef.current = false;
+  }, [goalData]);
+
+  // Late alert once per hour boundary, suppressed while timer is running
+  useEffect(() => {
+    const currentHour = now.getHours();
+    if (currentHour === lastAlertHourRef.current) return;
+    lastAlertHourRef.current = currentHour;
+    if (!goalData.isLate || running) return;
+    playAlertSound();
+    setShowLateAlert(true);
+    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+      try {
+        const { actualMs, goalHours } = goalData;
+        new Notification('Chesstíse — behind schedule', {
+          body: `${formatHM(actualMs)} / ${formatHM(goalHours * 3_600_000)} done`,
+        });
+      } catch { /* Notification unavailable */ }
+    }
+  }, [goalData, now, running]);
+
+  const { goalHours, actualMs, actualHours, isLate } = goalData;
 
   const hasGoal       = goalHours > 0;
   const goalTotalMin  = Math.round(goalHours * 60);
   const goalH         = Math.floor(goalTotalMin / 60);
   const goalM         = goalTotalMin % 60;
   const freeUntilTime = hasGoal ? freeUntil(actualHours, goalHours, now) : null;
-  const manualMsToday = manualMsByDateByType[activeGoal]?.[todayKey] ?? 0;
+  const manualMsToday = manualMsByDate[todayKey] ?? 0;
   const runningMsDisplay = running ? Math.max(0, now.getTime() - running.startedAt) : 0;
 
   const updateGoal = (h: number, m: number) => {
     const hours = Math.max(0, h) + Math.max(0, Math.min(59, m)) / 60;
-    setGoalHours(activeGoal, todayKey, hours);
+    setGoalHours(todayKey, hours);
   };
-
-  // Triumph sound when any goal is first met this session
-  useEffect(() => {
-    for (const { type, goalHours: gh, actualHours: ah } of goalData) {
-      if (gh <= 0) { goalMetRef.current[type] = false; continue; }
-      const met = ah >= gh;
-      if (met && !goalMetRef.current[type]) {
-        goalMetRef.current[type] = true;
-        playCongratsSound();
-      }
-      if (!met) goalMetRef.current[type] = false;
-    }
-  }, [goalData]);
-
-  // Late alerts — fire once per hour boundary, aggregate all late goals into one popup
-  useEffect(() => {
-    const currentHour = now.getHours();
-    if (currentHour === lastAlertHourRef.current) return;
-    lastAlertHourRef.current = currentHour;
-
-    const late = goalData.filter(d => d.isLate && running?.type !== d.type);
-    if (late.length === 0) return;
-
-    playAlertSound();
-    setLateGoals(late.map(d => d.type));
-    if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-      try {
-        const body = late
-          .map(d => `${GOAL_LABELS[d.type]}: ${formatHM(d.actualMs)} / ${formatHM(d.goalHours * 3_600_000)}`)
-          .join(' · ');
-        new Notification('Chesstíse — behind schedule', { body });
-      } catch { /* Notification unavailable */ }
-    }
-  }, [goalData, now, running]);
 
   const handleToggle = () => {
     if (running) { stop(); return; }
     if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
       void Notification.requestPermission();
     }
-    start(activeGoal);
+    start();
   };
 
   const handleAddManual = () => {
     const ms = (Math.max(0, manualH) * 60 + Math.max(0, Math.min(59, manualM))) * 60_000;
-    if (ms > 0) addManualMs(activeGoal, todayKey, ms);
+    if (ms > 0) addManualMs(todayKey, ms);
     setManualH(0);
     setManualM(0);
     setShowManual(false);
@@ -214,17 +220,6 @@ export default function MotivationBar() {
   return (
     <div className="motivation-bar">
       <div className="motivation-controls">
-        <select
-          className="motivation-goal-select"
-          value={activeGoal}
-          onChange={e => setActiveGoal(e.target.value as GoalType)}
-          aria-label="Active goal"
-        >
-          {GOAL_TYPES.map(t => (
-            <option key={t} value={t}>{GOAL_LABELS[t]}</option>
-          ))}
-        </select>
-
         <label className="motivation-goal-label">
           Goal
           <NumField
@@ -251,7 +246,7 @@ export default function MotivationBar() {
         <button
           className={`motivation-playstop${running ? ' running' : ''}`}
           onClick={handleToggle}
-          aria-label={running ? 'Stop work session' : `Start ${GOAL_LABELS[activeGoal]} session`}
+          aria-label={running ? 'Stop session' : 'Start session'}
         >
           {running
             ? <span className="motivation-stop-icon" aria-hidden="true" />
@@ -290,7 +285,7 @@ export default function MotivationBar() {
               {manualMsToday > 0 && (
                 <div className="motivation-manual-existing">
                   <span>Added manually today: {formatHM(manualMsToday)}</span>
-                  <button className="motivation-manual-clear" onClick={() => clearManualMs(activeGoal, todayKey)}>Clear</button>
+                  <button className="motivation-manual-clear" onClick={() => clearManualMs(todayKey)}>Clear</button>
                 </div>
               )}
             </div>
@@ -329,15 +324,46 @@ export default function MotivationBar() {
           {!hasGoal
             ? 'Set a goal to start tracking'
             : isLate
-              ? `Behind schedule — ${formatHM(activeData.expected * 3_600_000 - actualMs)} to catch up`
+              ? `Behind schedule — ${formatHM(goalData.expected * 3_600_000 - actualMs)} to catch up`
               : freeUntilTime
                 ? `On track — free until ${formatClock(freeUntilTime)}`
                 : ''}
         </span>
       </div>
 
-      {lateGoals.length > 0 && createPortal(
-        <div className="modal-backdrop" onClick={() => setLateGoals([])}>
+      {historyRows.length > 0 && (
+        <div className="motivation-history">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Goal</th>
+                <th>Done</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {historyRows.map(({ date, goalH: gh, doneMs }) => {
+                const met    = gh > 0 && doneMs >= gh * 3_600_000;
+                const behind = gh > 0 && doneMs < gh * 3_600_000;
+                return (
+                  <tr key={date} className={date === todayKey ? 'motivation-history-today' : ''}>
+                    <td>{shortDate(date)}</td>
+                    <td>{gh > 0 ? formatHM(gh * 3_600_000) : '—'}</td>
+                    <td>{doneMs > 0 ? formatHM(doneMs) : '—'}</td>
+                    <td className={met ? 'hist-met' : behind ? 'hist-behind' : ''}>
+                      {met ? '✓' : behind ? '✗' : ''}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {showLateAlert && createPortal(
+        <div className="modal-backdrop" onClick={() => setShowLateAlert(false)}>
           <div
             className="modal-panel motivation-alert-panel"
             role="alertdialog"
@@ -347,21 +373,15 @@ export default function MotivationBar() {
           >
             <div className="modal-header">
               <span className="modal-title">⏰ Behind schedule</span>
-              <button className="modal-close-btn" onClick={() => setLateGoals([])} aria-label="Close">×</button>
+              <button className="modal-close-btn" onClick={() => setShowLateAlert(false)} aria-label="Close">×</button>
             </div>
             <div className="motivation-alert-body">
-              {lateGoals.map(type => {
-                const d = goalData.find(x => x.type === type)!;
-                return (
-                  <p key={type} style={{ margin: '0 0 0.5rem' }}>
-                    <strong>{GOAL_LABELS[type]}</strong>: {formatHM(d.actualMs)} of {formatHM(d.goalHours * 3_600_000)} done.
-                    Time to {GOAL_ACTION[type]}.
-                  </p>
-                );
-              })}
+              <p style={{ margin: 0 }}>
+                {formatHM(actualMs)} of {formatHM(goalHours * 3_600_000)} done. Time to play.
+              </p>
             </div>
             <div style={{ textAlign: 'right', padding: '0 1rem 0.75rem' }}>
-              <button className="motivation-manual-add" onClick={() => setLateGoals([])}>OK (Enter)</button>
+              <button className="motivation-manual-add" onClick={() => setShowLateAlert(false)}>OK (Enter)</button>
             </div>
           </div>
         </div>,

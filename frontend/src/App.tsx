@@ -37,7 +37,7 @@ export default function App() {
   return (
     <AppLayout>
       <Routes>
-        <Route path="/"                   element={<Navigate to="/cell-guesser" replace />} />
+        <Route path="/"                   element={<Navigate to="/cross-search" replace />} />
         <Route path="/cell-guesser"       element={<CellGuesser />} />
         <Route path="/square-color"       element={<SquareColorDrill />} />
         <Route path="/blind-pathing"      element={<BlindPathing />} />
